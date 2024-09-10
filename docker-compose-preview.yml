@@ -15,8 +15,8 @@ services:
     environment:
       DATABASE_URL: "postgresql://llmproxy:dbpassword9090@db:5432/litellm"
       STORE_MODEL_IN_DB: "True" # allows adding models to proxy via UI
-    env_file:
-      - .env # Load local .env file
+#    env_file:
+#      - .env # Load local .env file
     command: ["--port", "4000", "--config", "sofatutor_config.yaml"]
 
   db:
