@@ -5,11 +5,6 @@ services:
       args:
         target: runtime
     image: ghcr.io/sofatutor/litellm:sofatutor
-    #########################################
-    ## Uncomment these lines to start proxy with a config.yaml file ##
-    volumes:
-      - ./hosted_config.yaml:/app/config.yaml # Mount the local configuration file
-    ###############################################
     ports:
       - "4000:4000" # Map the container port to the host, change the host port if necessary
     environment:
