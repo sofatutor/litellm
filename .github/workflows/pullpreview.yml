@@ -1,0 +1,35 @@
+name: preview
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened]
+
+env:
+  DNS: 'previews.sofatutor.us'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.label.name == 'preview' || contains(github.event.pull_request.labels.*.name, 'preview')
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sofatutor/pullpreview@sofatutor
+        with:
+          admins: mfittko,Ayushi1296
+          always_on: main
+          app_path: .
+          instance_type: small
+          dns: ${{ env.DNS }}
+          default_port: 3000
+          registries: docker://index.docker.io/v1
+          compose_files: docker-compose.yml
+        env:
+          AWS_REGION: eu-central-1
+          PULLPREVIEW_ENV_VARS: "DOMAIN=${{ env.DNS }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }},LITELLM_MASTER_KEY=${{ secrets.LITELLM_MASTER_KEY }},LITELLM_SALT_KEY=${{ secrets.LITELLM_SALT_KEY }}"
+          PULLPREVIEW_LAUNCH_COMMAND: COMPOSE_FILE=docker-compose-preview.yml docker-compose up -d --build --force-recreate
+          AWS_ACCESS_KEY_ID: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+          AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
