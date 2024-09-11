@@ -4690,10 +4690,25 @@ async def add_messages(
             proxy_config=proxy_config,
         )
 
-        ### CALL HOOKS ### - modify incoming data before calling the model
-        data = await proxy_logging_obj.pre_call_hook(
-            user_api_key_dict=user_api_key_dict, data=data, call_type="thread_message"
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="add_messages",
         )
+
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="add_messages",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
@@ -4720,7 +4735,7 @@ async def add_messages(
         cache_key = hidden_params.get("cache_key", None) or ""
         api_base = hidden_params.get("api_base", None) or ""
         response_cost = hidden_params.get("response_cost", None) or ""
-        litellm_call_id = hidden_params.get("litellm_call_id", None) or ""
+        litellm_call_id = hidden_params.get("litellm_call_id", logging_obj.litellm_call_id) or ""
 
         fastapi_response.headers.update(
             get_custom_headers(
