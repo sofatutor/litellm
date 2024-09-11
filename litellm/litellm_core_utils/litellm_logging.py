@@ -1134,6 +1134,14 @@ class Logging:
                                     end_time=end_time,
                                     print_verbose=print_verbose,
                                 )
+                            elif self.model_call_details.get("log_event_type") == "successful_api_call":
+                                s3Logger.log_event(
+                                    kwargs=self.model_call_details,
+                                    response_obj=result,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    print_verbose=print_verbose,
+                                )
                             else:
                                 print_verbose(
                                     "S3Logger Logger: Got Stream Event - No complete stream response as yet"
