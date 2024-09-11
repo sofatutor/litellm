@@ -842,6 +842,8 @@ class ProxyLogging:
         elif isinstance(response, str):
             # Handle string responses
             response_str = response
+        else:
+            response_str = str(response)
 
         if response_str is not None:
             verbose_proxy_logger.debug(f"Processing response string: {response_str[:100]}...")  # Log first 100 chars
