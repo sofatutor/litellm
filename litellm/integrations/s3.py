@@ -135,12 +135,14 @@ class S3Logger:
                 + s3_file_name
             )  # we need the s3 key to include the time, so we log cache hits too
             s3_object_key += ".json"
+            
+            payload_id = payload.get("id", payload.get("litellm_call_id", ""))
 
             s3_object_download_filename = (
                 "time-"
                 + start_time.strftime("%Y-%m-%dT%H-%M-%S-%f")
                 + "_"
-                + payload["id"]
+                + payload_id
                 + ".json"
             )
 
