@@ -29,6 +29,6 @@ jobs:
         env:
           AWS_REGION: eu-central-1
           PULLPREVIEW_ENV_VARS: "DOMAIN=${{ env.DNS }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},LITELLM_MASTER_KEY=${{ secrets.LITELLM_MASTER_KEY }},LITELLM_SALT_KEY=${{ secrets.LITELLM_SALT_KEY }}"
-          PULLPREVIEW_LAUNCH_COMMAND: docker-compose up -d --build --force-recreate -f docker-compose.pullpreview.yml
+          PULLPREVIEW_LAUNCH_COMMAND: COMPOSE_FILE=docker-compose.pullpreview.yml docker-compose up -d --build --force-recreate
           AWS_ACCESS_KEY_ID: "${{ secrets.AWS_ACCESS_KEY_ID }}"
           AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
