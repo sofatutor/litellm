@@ -125,7 +125,7 @@ class S3Logger:
             )
 
             if payload is None:
-                return
+                payload = clean_metadata
 
             s3_file_name = litellm.utils.get_logging_id(start_time, payload) or ""
             s3_object_key = (
