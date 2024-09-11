@@ -4690,13 +4690,6 @@ async def add_messages(
             proxy_config=proxy_config,
         )
 
-        # Log the request
-        await proxy_logging_obj.pre_call_hook(
-            user_api_key_dict=user_api_key_dict,
-            data=data,
-            call_type="add_messages",
-        )
-
         # Initialize logging object
         data["litellm_call_id"] = request.headers.get(
             "x-litellm-call-id", str(uuid.uuid4())
@@ -4709,6 +4702,13 @@ async def add_messages(
         )
 
         data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="add_messages",
+        )
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
@@ -4896,6 +4896,7 @@ async def run_thread(
     try:
         body = await request.body()
         data = orjson.loads(body)
+        
         # Include original request and headers in the data
         data = await add_litellm_data_to_request(
             data=data,
@@ -4904,6 +4905,26 @@ async def run_thread(
             user_api_key_dict=user_api_key_dict,
             version=version,
             proxy_config=proxy_config,
+        )
+
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="run_thread",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="run_thread",
         )
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
