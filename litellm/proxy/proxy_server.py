@@ -4721,7 +4721,7 @@ async def add_messages(
 
         ### CALL HOOKS ### - modify outgoing data
         response = await proxy_logging_obj.post_call_success_hook(
-            user_api_key_dict=user_api_key_dict, response=response
+            data=data, user_api_key_dict=user_api_key_dict, response=response
         )
 
         ### ALERTING ###
