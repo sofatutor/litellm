@@ -766,7 +766,7 @@ class ProxyLogging:
     async def post_call_success_hook(
         self,
         data: dict,
-        response: Union[ModelResponse, EmbeddingResponse, ImageResponse, AssistantResponse, ThreadResponse, MessageResponse, RunResponse],
+        response: Union[ModelResponse, EmbeddingResponse, ImageResponse],
         user_api_key_dict: UserAPIKeyAuth,
     ):
         """
