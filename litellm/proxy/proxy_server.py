@@ -4202,12 +4202,6 @@ async def get_assistants(
             proxy_config=proxy_config,
         )
 
-        # Check cache
-        cache_key = f"assistants:{user_api_key_dict.user_id}"
-        cached_response = await proxy_logging_obj.get_cache(cache_key)
-        if cached_response:
-            return cached_response
-
         # Log the request
         await proxy_logging_obj.pre_call_hook(
             user_api_key_dict=user_api_key_dict,
@@ -4221,17 +4215,6 @@ async def get_assistants(
                 status_code=500, detail={"error": CommonProxyErrors.no_llm_router.value}
             )
         response = await llm_router.aget_assistants(**data)
-
-        # Cache the response
-        await proxy_logging_obj.set_cache(cache_key, response, ttl=300)  # Cache for 5 minutes
-
-        ### LOGGING ###
-        await proxy_logging_obj.success_call_hook(
-            user_api_key_dict=user_api_key_dict,
-            data=data,
-            response=response,
-            call_type="assistants",
-        )
 
         ### ALERTING ###
         asyncio.create_task(
