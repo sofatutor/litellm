@@ -22,6 +22,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY}
+      LITELLM_LOG: "DEBUG"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
     command: ["--port", "4000", "--config", "sofatutor_config.yaml"]
