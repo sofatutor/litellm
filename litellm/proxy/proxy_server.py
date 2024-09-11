@@ -4202,12 +4202,36 @@ async def get_assistants(
             proxy_config=proxy_config,
         )
 
+        # Check cache
+        cache_key = f"assistants:{user_api_key_dict.user_id}"
+        cached_response = await proxy_logging_obj.get_cache(cache_key)
+        if cached_response:
+            return cached_response
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="assistants",
+        )
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
                 status_code=500, detail={"error": CommonProxyErrors.no_llm_router.value}
             )
         response = await llm_router.aget_assistants(**data)
+
+        # Cache the response
+        await proxy_logging_obj.set_cache(cache_key, response, ttl=300)  # Cache for 5 minutes
+
+        ### LOGGING ###
+        await proxy_logging_obj.success_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            response=response,
+            call_type="assistants",
+        )
 
         ### ALERTING ###
         asyncio.create_task(
@@ -4236,6 +4260,12 @@ async def get_assistants(
 
         return response
     except Exception as e:
+        await proxy_logging_obj.failure_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            error=e,
+            call_type="assistants",
+        )
         await proxy_logging_obj.post_call_failure_hook(
             user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
         )

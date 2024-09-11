@@ -376,6 +376,7 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
+            "assistants",
         ],
     ) -> dict:
         """
