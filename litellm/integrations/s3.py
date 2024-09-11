@@ -7,6 +7,7 @@ import subprocess
 import sys
 import traceback
 import uuid
+import openai
 from typing import Optional
 
 import litellm
@@ -126,6 +127,20 @@ class S3Logger:
 
             if payload is None:
                 payload = clean_metadata
+                # result is a openai.lib.streaming._assistants.AsyncAssistantEventHandler
+                if isinstance(response_obj, openai.lib.streaming._assistants.AsyncAssistantEventHandler):
+                    current_run = response_obj.current_run
+                    payload["id"] = current_run.id
+                    payload["assistant_id"] = current_run.assistant_id
+                    payload["thread_id"] = current_run.thread_id
+                    payload["completion_tokens"] = current_run.usage.completion_tokens
+                    payload["prompt_tokens"] = current_run.usage.prompt_tokens
+                    payload["total_tokens"] = current_run.usage.total_tokens
+                    payload["created_at"] = current_run.created_at
+                    payload["completed_at"] = current_run.completed_at
+                    payload["failed_at"] = current_run.failed_at
+                    payload["cancelled_at"] = current_run.cancelled_at
+                    payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
             
             payload_id = payload.get("id", payload.get("litellm_call_id", ""))
 
