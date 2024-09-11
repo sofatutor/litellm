@@ -11,7 +11,7 @@ services:
         parallelism: 1
         order: stop-first
         failure_action: rollback
-        delay: 10s
+        delay: 30s
       restart_policy:
         condition: on-failure
     environment:
@@ -25,6 +25,12 @@ services:
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
     command: ["--port", "4000", "--config", "sofatutor_config.yaml"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       - redis
       - db
