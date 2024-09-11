@@ -126,8 +126,17 @@ class S3Logger:
 
             if payload is None:
                 payload = clean_metadata
+            
+            payload_id = payload.get("id", payload.get("litellm_call_id", ""))
 
-            s3_file_name = litellm.utils.get_logging_id(start_time, payload) or ""
+            s3_file_name = (
+                "time-"
+                + start_time.strftime("%Y-%m-%dT%H-%M-%S-%f")
+                + "_"
+                + payload_id
+                + ".json"
+            )
+            
             s3_object_key = (
                 (self.s3_path.rstrip("/") + "/" if self.s3_path else "")
                 + start_time.strftime("%Y-%m-%d")
@@ -135,16 +144,6 @@ class S3Logger:
                 + s3_file_name
             )  # we need the s3 key to include the time, so we log cache hits too
             s3_object_key += ".json"
-            
-            payload_id = payload.get("id", payload.get("litellm_call_id", ""))
-
-            s3_object_download_filename = (
-                "time-"
-                + start_time.strftime("%Y-%m-%dT%H-%M-%S-%f")
-                + "_"
-                + payload_id
-                + ".json"
-            )
 
             import json
 
@@ -158,7 +157,7 @@ class S3Logger:
                 Body=payload,
                 ContentType="application/json",
                 ContentLanguage="en",
-                ContentDisposition=f'inline; filename="{s3_object_download_filename}"',
+                ContentDisposition=f'inline; filename="{s3_file_name}"',
                 CacheControl="private, immutable, max-age=31536000, s-maxage=0",
             )
 
