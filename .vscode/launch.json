@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "LiteLLM Proxy",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "litellm.proxy.proxy_cli",
+      "args": [
+        "--config",
+        "${workspaceFolder}/sofatutor_config.yaml",
+        "--debug"
+      ],
+      "env": {
+        "LITELLM_LOG": "DEBUG",
+        "LITELLM_MASTER_KEY": "test"
+      },
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
