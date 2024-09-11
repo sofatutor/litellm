@@ -24,13 +24,11 @@ jobs:
           app_path: .
           instance_type: small
           dns: ${{ env.DNS }}
-          default_port: 4000
+          default_port: 8080
           registries: docker://index.docker.io/v1
-          compose_files: docker-compose.yml
         env:
-          COMPOSE_FILE: docker-compose.pullpreview.yml
           AWS_REGION: eu-central-1
           PULLPREVIEW_ENV_VARS: "DOMAIN=${{ env.DNS }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},LITELLM_MASTER_KEY=${{ secrets.LITELLM_MASTER_KEY }},LITELLM_SALT_KEY=${{ secrets.LITELLM_SALT_KEY }}"
-          PULLPREVIEW_LAUNCH_COMMAND:  docker-compose up -d --build --force-recreate
+          PULLPREVIEW_LAUNCH_COMMAND: docker-compose up -d --build --force-recreate -f docker-compose.pullpreview.yml
           AWS_ACCESS_KEY_ID: "${{ secrets.AWS_ACCESS_KEY_ID }}"
           AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
