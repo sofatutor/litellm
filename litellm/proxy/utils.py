@@ -821,7 +821,7 @@ class ProxyLogging:
 
     async def async_post_call_streaming_hook(
         self,
-        response: Union[ModelResponse, EmbeddingResponse, ImageResponse],
+        response: Union[ModelResponse, EmbeddingResponse, ImageResponse, dict, str],
         user_api_key_dict: UserAPIKeyAuth,
     ):
         """
@@ -829,11 +829,22 @@ class ProxyLogging:
 
         Covers:
         1. /chat/completions
+        2. /v1/threads/{thread_id}/runs (streaming)
         """
+        verbose_proxy_logger.debug(f"Entering async_post_call_streaming_hook with response type: {type(response)}")
+
         response_str: Optional[str] = None
         if isinstance(response, ModelResponse):
             response_str = litellm.get_response_string(response_obj=response)
+        elif isinstance(response, dict):
+            # Handle dictionary responses (e.g., from threads API)
+            response_str = json.dumps(response)
+        elif isinstance(response, str):
+            # Handle string responses
+            response_str = response
+
         if response_str is not None:
+            verbose_proxy_logger.debug(f"Processing response string: {response_str[:100]}...")  # Log first 100 chars
             for callback in litellm.callbacks:
                 try:
                     _callback: Optional[CustomLogger] = None
@@ -844,11 +855,18 @@ class ProxyLogging:
                     else:
                         _callback = callback  # type: ignore
                     if _callback is not None and isinstance(_callback, CustomLogger):
+                        verbose_proxy_logger.debug(f"Calling async_post_call_streaming_hook for callback: {type(_callback)}")
                         await _callback.async_post_call_streaming_hook(
                             user_api_key_dict=user_api_key_dict, response=response_str
                         )
                 except Exception as e:
-                    raise e
+                    verbose_proxy_logger.error(f"Error in async_post_call_streaming_hook for callback {type(_callback)}: {str(e)}")
+                    # Consider whether you want to raise this exception or just log it
+                    # raise e
+        else:
+            verbose_proxy_logger.warning(f"Unhandled response type in async_post_call_streaming_hook: {type(response)}")
+
+        verbose_proxy_logger.debug("Finished async_post_call_streaming_hook")
         return response
 
     async def post_call_streaming_hook(
