@@ -2537,7 +2537,9 @@ async def async_assistants_data_generator(
                     yield f"data: {c}\n\n"
                 except Exception as e:
                     yield f"data: {str(e)}\n\n"
-
+        # log response
+        logging_obj = request_data.get("litellm_logging_obj", None)
+        logging_obj.success_handler(chunk, start_time, datetime.now(), False)
         # Streaming is done, yield the [DONE] chunk
         done_message = "[DONE]"
         yield f"data: {done_message}\n\n"
