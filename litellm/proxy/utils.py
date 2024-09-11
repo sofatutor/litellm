@@ -57,6 +57,15 @@ from litellm.proxy.hooks.parallel_request_limiter import (
     _PROXY_MaxParallelRequestsHandler,
 )
 from litellm.types.utils import CallTypes, LoggedLiteLLMParams
+from litellm.types import (
+    ModelResponse,
+    EmbeddingResponse,
+    ImageResponse,
+    AssistantResponse,
+    ThreadResponse,
+    MessageResponse,
+    RunResponse,
+)
 
 if TYPE_CHECKING:
     from opentelemetry.trace import Span as _Span
@@ -377,6 +386,9 @@ class ProxyLogging:
             "pass_through_endpoint",
             "rerank",
             "assistants",
+            "thread",
+            "thread_message",
+            "thread_run",
         ],
     ) -> dict:
         """
@@ -763,7 +775,7 @@ class ProxyLogging:
     async def post_call_success_hook(
         self,
         data: dict,
-        response: Union[ModelResponse, EmbeddingResponse, ImageResponse],
+        response: Union[ModelResponse, EmbeddingResponse, ImageResponse, AssistantResponse, ThreadResponse, MessageResponse, RunResponse],
         user_api_key_dict: UserAPIKeyAuth,
     ):
         """
@@ -1961,86 +1973,6 @@ class PrismaClient:
                     original_exception=e,
                     duration=_duration,
                     call_type="update_data",
-                    traceback_str=error_traceback,
-                )
-            )
-            raise e
-
-    # Define a retrying strategy with exponential backoff
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,  # base exception to catch for the backoff
-        max_tries=3,  # maximum number of retries
-        max_time=10,  # maximum total time to retry for
-        on_backoff=on_backoff,  # specifying the function to call on backoff
-    )
-    async def delete_data(
-        self,
-        tokens: Optional[List] = None,
-        team_id_list: Optional[List] = None,
-        table_name: Optional[Literal["user", "key", "config", "spend", "team"]] = None,
-        user_id: Optional[str] = None,
-    ):
-        """
-        Allow user to delete a key(s)
-
-        Ensure user owns that key, unless admin.
-        """
-        start_time = time.time()
-        try:
-            if tokens is not None and isinstance(tokens, List):
-                hashed_tokens = []
-                for token in tokens:
-                    if isinstance(token, str) and token.startswith("sk-"):
-                        hashed_token = self.hash_token(token=token)
-                    else:
-                        hashed_token = token
-                    hashed_tokens.append(hashed_token)
-                filter_query: dict = {}
-                if user_id is not None:
-                    filter_query = {
-                        "AND": [{"token": {"in": hashed_tokens}}, {"user_id": user_id}]
-                    }
-                else:
-                    filter_query = {"token": {"in": hashed_tokens}}
-
-                deleted_tokens = await self.db.litellm_verificationtoken.delete_many(
-                    where=filter_query  # type: ignore
-                )
-                verbose_proxy_logger.debug("deleted_tokens: %s", deleted_tokens)
-                return {"deleted_keys": deleted_tokens}
-            elif (
-                table_name == "team"
-                and team_id_list is not None
-                and isinstance(team_id_list, List)
-            ):
-                # admin only endpoint -> `/team/delete`
-                await self.db.litellm_teamtable.delete_many(
-                    where={"team_id": {"in": team_id_list}}
-                )
-                return {"deleted_teams": team_id_list}
-            elif (
-                table_name == "key"
-                and team_id_list is not None
-                and isinstance(team_id_list, List)
-            ):
-                # admin only endpoint -> `/team/delete`
-                await self.db.litellm_verificationtoken.delete_many(
-                    where={"team_id": {"in": team_id_list}}
-                )
-        except Exception as e:
-            import traceback
-
-            error_msg = f"LiteLLM Prisma Client Exception - delete_data: {str(e)}"
-            print_verbose(error_msg)
-            error_traceback = error_msg + "\n" + traceback.format_exc()
-            end_time = time.time()
-            _duration = end_time - start_time
-            asyncio.create_task(
-                self.proxy_logging_obj.failure_handler(
-                    original_exception=e,
-                    duration=_duration,
-                    call_type="delete_data",
                     traceback_str=error_traceback,
                 )
             )
