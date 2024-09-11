@@ -602,6 +602,8 @@ def function_setup(
         litellm_params = {"api_base": ""}
         if "metadata" in kwargs:
             litellm_params["metadata"] = kwargs["metadata"]
+        elif "litellm_metadata" in kwargs:
+            litellm_params["metadata"] = kwargs["litellm_metadata"]
         logging_obj.update_environment_variables(
             model=model,
             user="",
