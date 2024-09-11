@@ -15,3 +15,12 @@ litellm_settings:
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY # [OPTIONAL] Use to enforce auth on proxy. See - https://docs.litellm.ai/docs/proxy/virtual_keys
   store_model_in_db: True
+
+router_settings:
+  redis_host: "redis"
+  redis_port: 6379
+
+cache:
+  type: "redis"
+  host: "redis"
+  port: 6379
