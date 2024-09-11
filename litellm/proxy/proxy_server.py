@@ -4260,12 +4260,6 @@ async def get_assistants(
 
         return response
     except Exception as e:
-        await proxy_logging_obj.failure_call_hook(
-            user_api_key_dict=user_api_key_dict,
-            data=data,
-            error=e,
-            call_type="assistants",
-        )
         await proxy_logging_obj.post_call_failure_hook(
             user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
         )
@@ -4727,7 +4721,7 @@ async def add_messages(
 
         ### CALL HOOKS ### - modify outgoing data
         response = await proxy_logging_obj.post_call_success_hook(
-            user_api_key_dict=user_api_key_dict, response=response, call_type="thread_message"
+            user_api_key_dict=user_api_key_dict, response=response
         )
 
         ### ALERTING ###
