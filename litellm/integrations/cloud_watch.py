@@ -16,6 +16,7 @@ class CloudWatchLogger:
         self,
         log_group_name=None,
         log_stream_name=None,
+        aws_region=None,
     ):
         try:
             verbose_logger.debug(
@@ -30,18 +31,21 @@ class CloudWatchLogger:
                 # now set cloudwatch params from litellm.cloudwatch_callback_params
                 log_group_name = litellm.cloudwatch_callback_params.get("log_group_name", log_group_name)
                 log_stream_name = litellm.cloudwatch_callback_params.get("log_stream_name", log_stream_name)
+                aws_region = litellm.cloudwatch_callback_params.get("aws_region", aws_region)
 
             self.log_group_name = log_group_name or os.getenv("CLOUDWATCH_LOG_GROUP_NAME")
             self.log_stream_name = log_stream_name or os.getenv("CLOUDWATCH_LOG_STREAM_NAME")
+            self.aws_region = aws_region or os.getenv("AWS_REGION")
 
             if self.log_group_name is None:
                 raise ValueError("log_group_name must be provided either through parameters, cloudwatch_callback_params, or environment variables.")
 
             # Initialize CloudWatch Logs client
-            self.logs_client = boto3.client("logs")
+            self.logs_client = boto3.client("logs", region_name=self.aws_region)
 
             # Ensure the log group exists
             self._ensure_log_group()
+            self._ensure_log_stream()
             self.sequence_token = None
 
         except Exception as e:

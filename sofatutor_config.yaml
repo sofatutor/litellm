@@ -7,6 +7,7 @@ litellm_settings:
   success_callback: ["cloudwatch"]
   cloudwatch_callback_params:
     log_group_name: /litellm/sandbox
+    aws_region: eu-central-1
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
