@@ -95,62 +95,60 @@ class S3Logger:
             verbose_logger.debug(
                 f"s3 Logging - Enters logging function for model {kwargs}"
             )
-
-            # construct payload to send to s3
-            # follows the same params as langfuse.py
-            litellm_params = kwargs.get("litellm_params", {})
-            metadata = (
-                litellm_params.get("metadata", {}) or {}
-            )  # if litellm_params['metadata'] == None
-
-            # Clean Metadata before logging - never log raw metadata
-            # the raw metadata can contain circular references which leads to infinite recursion
-            # we clean out all extra litellm metadata params before logging
-            clean_metadata = {}
-            if isinstance(metadata, dict):
-                for key, value in metadata.items():
-                    # clean litellm metadata before logging
-                    if key in [
-                        "headers",
-                        "endpoint",
-                        "caching_groups",
-                        "previous_models",
-                    ]:
-                        continue
-                    else:
-                        clean_metadata[key] = value
-
-            # Ensure everything in the payload is converted to str
-            payload: Optional[StandardLoggingPayload] = kwargs.get(
-                "standard_logging_object", None
-            )
-
+            payload: Optional[StandardLoggingPayload] = kwargs.get("standard_logging_object", None)
             if payload is None:
+                # construct payload to send to s3
+                # follows the same params as langfuse.py
+                litellm_params = kwargs.get("litellm_params", {})
+                metadata = (
+                    litellm_params.get("metadata", {}) or {}
+                )  # if litellm_params['metadata'] == None
+                clean_metadata = {}
+
+                # Clean Metadata before logging - never log raw metadata
+                # the raw metadata can contain circular references which leads to infinite recursion
+                # we clean out all extra litellm metadata params before logging
+                if isinstance(metadata, dict):
+                    for key, value in metadata.items():
+                        # clean litellm metadata before logging
+                        if key in [
+                            "headers",
+                            "endpoint",
+                            "caching_groups",
+                            "previous_models",
+                        ]:
+                            continue
+                        else:
+                            clean_metadata[key] = value
                 payload = clean_metadata
-                # result is a openai.lib.streaming._assistants.AsyncAssistantEventHandler
-                if isinstance(response_obj, openai.lib.streaming._assistants.AsyncAssistantEventHandler):
-                    current_run = response_obj.current_run
-                    payload["id"] = current_run.id
-                    payload["assistant_id"] = current_run.assistant_id
-                    payload["thread_id"] = current_run.thread_id
-                    payload["completion_tokens"] = current_run.usage.completion_tokens
-                    payload["prompt_tokens"] = current_run.usage.prompt_tokens
-                    payload["total_tokens"] = current_run.usage.total_tokens
-                    payload["created_at"] = current_run.created_at
-                    payload["completed_at"] = current_run.completed_at
-                    payload["failed_at"] = current_run.failed_at
-                    payload["cancelled_at"] = current_run.cancelled_at
-                    payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
-            
+
+            if isinstance(response_obj, openai.lib.streaming._assistants.AsyncAssistantEventHandler):
+                current_run = response_obj.current_run
+                payload["id"] = current_run.id
+                payload["assistant_id"] = current_run.assistant_id
+                payload["thread_id"] = current_run.thread_id
+                payload["completion_tokens"] = current_run.usage.completion_tokens
+                payload["prompt_tokens"] = current_run.usage.prompt_tokens
+                payload["total_tokens"] = current_run.usage.total_tokens
+                payload["created_at"] = current_run.created_at
+                payload["completed_at"] = current_run.completed_at
+                payload["failed_at"] = current_run.failed_at
+                payload["cancelled_at"] = current_run.cancelled_at
+                payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
+                payload.pop("response", None) # remove response from payload as it's not json serializable
+
+            import json
+            log_event_message = json.dumps(payload)
+
             payload_id = payload.get("id", payload.get("litellm_call_id", ""))
 
             s3_file_name = (
-                + start_time.strftime("%Y-%m-%dT%H-%M-%S-%f")
+                start_time.strftime("%Y-%m-%dT%H-%M-%S-%f")
                 + "_"
                 + payload_id
                 + ".json"
             )
-            
+
             s3_object_key = (
                 (self.s3_path.rstrip("/") + "/" if self.s3_path else "")
                 + start_time.strftime("%Y-%m-%d")
@@ -160,14 +158,12 @@ class S3Logger:
 
             import json
 
-            payload = json.dumps(payload)
-
-            print_verbose(f"\ns3 Logger - Logging payload = {payload}")
+            print_verbose(f"\ns3 Logger - Logging payload = {log_event_message}")
 
             response = self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=s3_object_key,
-                Body=payload,
+                Body=log_event_message,
                 ContentType="application/json",
                 ContentLanguage="en",
                 ContentDisposition=f'inline; filename="{s3_file_name}"',
