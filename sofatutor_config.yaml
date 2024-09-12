@@ -4,13 +4,9 @@ assistant_settings:
     api_key: os.environ/OPENAI_API_KEY
 litellm_settings:
   telemetry: True
-  success_callback: ["s3"]
-  s3_callback_params:
-    s3_bucket_name: litellm.sandbox.sofatutor.org
-    s3_region_name: eu-central-1
-    s3_aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
-    s3_aws_secret_access_key: os.environ/AWS_SECRET_ACCESS_KEY
-    s3_path: logs/
+  success_callback: ["cloudwatch"]
+  cloudwatch_callback_params:
+    log_group_name: /litellm/sandbox
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
