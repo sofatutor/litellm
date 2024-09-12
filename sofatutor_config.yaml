@@ -16,6 +16,8 @@ general_settings:
 router_settings:
   redis_host: "redis"
   redis_port: 6379
+  num_retries: 5
+  timeout: 2
 
 cache:
   type: "redis"
