@@ -478,6 +478,7 @@ def function_setup(
                     inspect.iscoroutinefunction(callback)
                     or callback == "dynamodb"
                     or callback == "s3"
+                    or callback == "cloudwatch"
                 ):
                     if dynamic_async_success_callbacks is not None and isinstance(
                         dynamic_async_success_callbacks, list
