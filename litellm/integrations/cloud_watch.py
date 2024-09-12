@@ -45,7 +45,6 @@ class CloudWatchLogger:
 
             # Ensure the log group exists
             self._ensure_log_group()
-            self._ensure_log_stream()
             self.sequence_token = None
 
         except Exception as e:
