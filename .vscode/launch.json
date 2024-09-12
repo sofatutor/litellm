@@ -13,7 +13,9 @@
       ],
       "env": {
         "LITELLM_LOG": "DEBUG",
-        "LITELLM_MASTER_KEY": "test"
+        "LITELLM_MASTER_KEY": "test",
+        "DATABASE_URL": "postgresql://llmproxy:dbpassword9090@localhost:5433/litellm",
+        "STORE_MODEL_IN_DB": "True"
       },
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
