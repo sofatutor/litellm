@@ -6,7 +6,7 @@ litellm_settings:
   telemetry: True
   success_callback: ["cloudwatch"]
   cloudwatch_callback_params:
-    log_group_name: /litellm/sandbox
+    log_group_name: /litellm
     aws_region: eu-central-1
 
 general_settings:
