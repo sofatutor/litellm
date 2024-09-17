@@ -4,7 +4,7 @@ services:
       context: .
       args:
         target: runtime
-    image: ghcr.io/sofatutor/litellm:sofatutor
+    image: ghcr.io/sofatutor/sofatutor/litellm:sofatutor
     deploy:
       replicas: 2
       update_config:
