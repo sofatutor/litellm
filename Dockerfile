@@ -34,6 +34,11 @@ RUN --mount=type=cache,target=/root/.cache/pip,id=litellm_pip \
 
 FROM $LITELLM_RUNTIME_IMAGE as runtime
 
+# Install runtime dependencies, e.g. curl for healthcheck
+RUN apt-get clean && apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=builder /wheels/ /wheels/
