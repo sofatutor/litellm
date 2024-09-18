@@ -2519,8 +2519,11 @@ async def async_assistants_data_generator(
                 try:
                     c = json.loads(c)
                     # Filter instructions if c contains data and data contains instructions
-                    if "data" in c and "instructions" in c["data"]:
-                        c["data"]["instructions"] = "..."
+                    if "data" in c:
+                        if "instructions" in c["data"]:
+                            c["data"]["instructions"] = "..."
+                        if "model" in c["data"]:
+                            c["data"]["model"] = "sofabuddy"
                     c = json.dumps(c)
                     yield f"data: {c}\n\n"
                 except Exception as e:
