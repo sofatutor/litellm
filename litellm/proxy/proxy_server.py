@@ -2517,8 +2517,11 @@ async def async_assistants_data_generator(
             async for c in chunk:  # type: ignore
                 c = c.model_dump_json(exclude_none=True)
                 try:
-                    if "instructions" in chunk:
-                        chunk["instructions"] = 'Filtered'
+                    c = json.loads(c)
+                    # Filter instructions if c contains data and data contains instructions
+                    if "data" in c and "instructions" in c["data"]:
+                        c["data"]["instructions"] = "..."
+                    c = json.dumps(c)
                     yield f"data: {c}\n\n"
                 except Exception as e:
                     yield f"data: {str(e)}\n\n"
