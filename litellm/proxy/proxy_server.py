@@ -2516,6 +2516,8 @@ async def async_assistants_data_generator(
             # chunk = chunk.model_dump_json(exclude_none=True)
             async for c in chunk:  # type: ignore
                 c = c.model_dump_json(exclude_none=True)
+                if "instructions" in chunk:
+                    del chunk["instructions"]
                 try:
                     yield f"data: {c}\n\n"
                 except Exception as e:
