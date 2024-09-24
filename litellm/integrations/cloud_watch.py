@@ -101,7 +101,10 @@ class CloudWatchLogger:
                 payload["completed_at"] = current_run.completed_at
                 payload["failed_at"] = current_run.failed_at
                 payload["cancelled_at"] = current_run.cancelled_at
-                payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
+                if response_obj.current_message_snapshot is not None:
+                    payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
+                else:
+                    payload["assistant_message"] = ""
                 payload.pop("response", None) # remove response from payload as it's not json serializable
 
             log_event_message = json.dumps(payload)
