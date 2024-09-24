@@ -46,11 +46,13 @@ import litellm
 from litellm._logging import verbose_logger, verbose_proxy_logger
 from litellm.proxy._types import *
 from litellm.proxy.auth.auth_checks import (
+    _cache_key_object,
     allowed_routes_check,
     can_key_call_model,
     common_checks,
     get_actual_routes,
     get_end_user_object,
+    get_key_object,
     get_org_object,
     get_team_object,
     get_user_object,
@@ -68,6 +70,7 @@ from litellm.proxy.auth.auth_utils import (
 from litellm.proxy.auth.oauth2_check import check_oauth2_token
 from litellm.proxy.auth.oauth2_proxy_hook import handle_oauth2_proxy_request
 from litellm.proxy.auth.route_checks import non_admin_allowed_routes_check
+from litellm.proxy.auth.service_account_checks import service_account_checks
 from litellm.proxy.common_utils.http_parsing_utils import _read_request_body
 from litellm.proxy.utils import _to_ns
 
@@ -218,6 +221,12 @@ async def user_api_key_auth(
             return await handle_oauth2_proxy_request(request=request)
 
         if general_settings.get("enable_jwt_auth", False) is True:
+            from litellm.proxy.proxy_server import premium_user
+
+            if premium_user is not True:
+                raise ValueError(
+                    f"JWT Auth is an enterprise only feature. {CommonProxyErrors.not_premium_user.value}"
+                )
             is_jwt = jwt_handler.is_jwt(token=api_key)
             verbose_proxy_logger.debug("is_jwt: %s", is_jwt)
             if is_jwt:
@@ -446,7 +455,6 @@ async def user_api_key_auth(
                                 and request.headers.get(key=header_key) is not None  # type: ignore
                             ):
                                 api_key = request.headers.get(key=header_key)  # type: ignore
-
         if master_key is None:
             if isinstance(api_key, str):
                 return UserAPIKeyAuth(
@@ -520,9 +528,19 @@ async def user_api_key_auth(
         ### CHECK IF ADMIN ###
         # note: never string compare api keys, this is vulenerable to a time attack. Use secrets.compare_digest instead
         ## Check CACHE
-        valid_token: Optional[UserAPIKeyAuth] = user_api_key_cache.get_cache(
-            key=hash_token(api_key)
-        )
+        try:
+            valid_token = await get_key_object(
+                hashed_token=hash_token(api_key),
+                prisma_client=prisma_client,
+                user_api_key_cache=user_api_key_cache,
+                parent_otel_span=parent_otel_span,
+                proxy_logging_obj=proxy_logging_obj,
+                check_cache_only=True,
+            )
+        except Exception:
+            verbose_logger.debug("api key not found in cache.")
+            valid_token = None
+
         if (
             valid_token is not None
             and isinstance(valid_token, UserAPIKeyAuth)
@@ -573,7 +591,7 @@ async def user_api_key_auth(
 
         try:
             is_master_key_valid = secrets.compare_digest(api_key, master_key)  # type: ignore
-        except Exception as e:
+        except Exception:
             is_master_key_valid = False
 
         ## VALIDATE MASTER KEY ##
@@ -597,8 +615,11 @@ async def user_api_key_auth(
                 parent_otel_span=parent_otel_span,
                 **end_user_params,
             )
-            await user_api_key_cache.async_set_cache(
-                key=hash_token(master_key), value=_user_api_key_obj
+            await _cache_key_object(
+                hashed_token=hash_token(master_key),
+                user_api_key_obj=_user_api_key_obj,
+                user_api_key_cache=user_api_key_cache,
+                proxy_logging_obj=proxy_logging_obj,
             )
 
             return _user_api_key_obj
@@ -635,38 +656,31 @@ async def user_api_key_auth(
         _user_role = None
         if api_key.startswith("sk-"):
             api_key = hash_token(token=api_key)
-        valid_token: Optional[UserAPIKeyAuth] = user_api_key_cache.get_cache(  # type: ignore
-            key=api_key
-        )
+
         if valid_token is None:
-            ## check db
-            verbose_proxy_logger.debug("api key: %s", api_key)
-            if prisma_client is not None:
-                _valid_token: Optional[BaseModel] = await prisma_client.get_data(
-                    token=api_key,
-                    table_name="combined_view",
+            try:
+                valid_token = await get_key_object(
+                    hashed_token=api_key,
+                    prisma_client=prisma_client,
+                    user_api_key_cache=user_api_key_cache,
                     parent_otel_span=parent_otel_span,
                     proxy_logging_obj=proxy_logging_obj,
                 )
+                # update end-user params on valid token
+                # These can change per request - it's important to update them here
+                valid_token.end_user_id = end_user_params.get("end_user_id")
+                valid_token.end_user_tpm_limit = end_user_params.get(
+                    "end_user_tpm_limit"
+                )
+                valid_token.end_user_rpm_limit = end_user_params.get(
+                    "end_user_rpm_limit"
+                )
+                valid_token.allowed_model_region = end_user_params.get(
+                    "allowed_model_region"
+                )
 
-                if _valid_token is not None:
-                    ## update cached token
-                    valid_token = UserAPIKeyAuth(
-                        **_valid_token.model_dump(exclude_none=True)
-                    )
-
-            verbose_proxy_logger.debug("Token from db: %s", valid_token)
-        elif valid_token is not None and isinstance(valid_token, UserAPIKeyAuth):
-            verbose_proxy_logger.debug("API Key Cache Hit!")
-
-            # update end-user params on valid token
-            # These can change per request - it's important to update them here
-            valid_token.end_user_id = end_user_params.get("end_user_id")
-            valid_token.end_user_tpm_limit = end_user_params.get("end_user_tpm_limit")
-            valid_token.end_user_rpm_limit = end_user_params.get("end_user_rpm_limit")
-            valid_token.allowed_model_region = end_user_params.get(
-                "allowed_model_region"
-            )
+            except Exception:
+                valid_token = None
 
         user_obj: Optional[LiteLLM_UserTable] = None
         valid_token_dict: dict = {}
@@ -683,6 +697,12 @@ async def user_api_key_auth(
             # 7. If token spend per model is under budget per model
             # 8. If token spend is under team budget
             # 9. If team spend is under team budget
+
+            ## base case ## key is disabled
+            if valid_token.blocked is True:
+                raise Exception(
+                    "Key is blocked. Update via `/key/unblock` if you're admin."
+                )
 
             # Check 1. If token can call model
             _model_alias_map = {}
@@ -946,6 +966,12 @@ async def user_api_key_auth(
             else:
                 _team_obj = None
 
+            # Check 9: Check if key is a service account key
+            await service_account_checks(
+                valid_token=valid_token,
+                request_data=request_data,
+            )
+
             user_api_key_cache.set_cache(
                 key=valid_token.team_id, value=_team_obj
             )  # save team table in cache - used for tpm/rpm limiting - tpm_rpm_limiter.py
@@ -1001,10 +1027,13 @@ async def user_api_key_auth(
             api_key = valid_token.token
 
             # Add hashed token to cache
-            await user_api_key_cache.async_set_cache(
-                key=api_key,
-                value=valid_token,
+            await _cache_key_object(
+                hashed_token=api_key,
+                user_api_key_obj=valid_token,
+                user_api_key_cache=user_api_key_cache,
+                proxy_logging_obj=proxy_logging_obj,
             )
+
             valid_token_dict = valid_token.model_dump(exclude_none=True)
             valid_token_dict.pop("token", None)
 
@@ -1033,7 +1062,7 @@ async def user_api_key_auth(
             # this token is only used for managing the ui
             allowed_routes = [
                 "/sso",
-                "/sso/get/logout_url",
+                "/sso/get/ui_settings",
                 "/login",
                 "/key/generate",
                 "/key/update",
@@ -1116,6 +1145,7 @@ async def user_api_key_auth(
         if open_telemetry_logger is not None:
             await open_telemetry_logger.async_post_call_failure_hook(  # type: ignore
                 original_exception=e,
+                request_data={},
                 user_api_key_dict=UserAPIKeyAuth(parent_otel_span=parent_otel_span),
             )
 

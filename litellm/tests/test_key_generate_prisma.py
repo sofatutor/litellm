@@ -56,6 +56,7 @@ from litellm.proxy.management_endpoints.key_management_endpoints import (
     generate_key_fn,
     generate_key_helper_fn,
     info_key_fn,
+    list_keys,
     regenerate_key_fn,
     update_key_fn,
 )
@@ -255,7 +256,7 @@ def test_generate_and_call_with_valid_key(prisma_client, api_route):
 
             # check /user/info to verify user_role was set correctly
             new_user_info = await user_info(user_id=user_id)
-            new_user_info = new_user_info["user_info"]
+            new_user_info = new_user_info.user_info
             print("new_user_info=", new_user_info)
             assert new_user_info.user_role == LitellmUserRoles.INTERNAL_USER
             assert new_user_info.user_id == user_id
@@ -2045,7 +2046,7 @@ async def test_default_key_params(prisma_client):
 
 
 @pytest.mark.asyncio()
-async def test_upperbound_key_params(prisma_client):
+async def test_upperbound_key_param_larger_budget(prisma_client):
     """
     - create key
     - get key info
@@ -2066,6 +2067,54 @@ async def test_upperbound_key_params(prisma_client):
         # print(result)
     except Exception as e:
         assert e.code == str(400)
+
+
+@pytest.mark.asyncio()
+async def test_upperbound_key_param_larger_duration(prisma_client):
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    litellm.upperbound_key_generate_params = LiteLLM_UpperboundKeyGenerateParams(
+        max_budget=100, duration="14d"
+    )
+    await litellm.proxy.proxy_server.prisma_client.connect()
+    try:
+        request = GenerateKeyRequest(
+            max_budget=10,
+            duration="30d",
+        )
+        key = await generate_key_fn(request)
+        pytest.fail("Expected this to fail but it passed")
+        # print(result)
+    except Exception as e:
+        assert e.code == str(400)
+
+
+@pytest.mark.asyncio()
+async def test_upperbound_key_param_none_duration(prisma_client):
+    from datetime import datetime, timedelta
+
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    litellm.upperbound_key_generate_params = LiteLLM_UpperboundKeyGenerateParams(
+        max_budget=100, duration="14d"
+    )
+    await litellm.proxy.proxy_server.prisma_client.connect()
+    try:
+        request = GenerateKeyRequest()
+        key = await generate_key_fn(request)
+
+        print(key)
+        # print(result)
+
+        assert key.max_budget == 100
+        assert key.expires is not None
+
+        _date_key_expires = key.expires.date()
+        _fourteen_days_from_now = (datetime.now() + timedelta(days=14)).date()
+
+        assert _date_key_expires == _fourteen_days_from_now
+    except Exception as e:
+        pytest.fail(f"Got exception {e}")
 
 
 def test_get_bearer_token():
@@ -3075,3 +3124,186 @@ async def test_admin_only_routes(prisma_client):
         pass
 
     setattr(proxy_server, "general_settings", initial_general_settings)
+
+
+@pytest.mark.asyncio
+async def test_list_keys(prisma_client):
+    """
+    Test the list_keys function:
+    - Test basic key
+    - Test pagination
+    - Test filtering by user_id, and key_alias
+    """
+    from fastapi import Query
+
+    from litellm.proxy.proxy_server import hash_token
+
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    await litellm.proxy.proxy_server.prisma_client.connect()
+
+    # Test basic listing
+    request = Request(scope={"type": "http", "query_string": b""})
+    response = await list_keys(
+        request,
+        UserAPIKeyAuth(),
+        page=1,
+        size=10,
+    )
+    print("response=", response)
+    assert "keys" in response
+    assert len(response["keys"]) > 0
+    assert "total_count" in response
+    assert "current_page" in response
+    assert "total_pages" in response
+
+    # Test pagination
+    response = await list_keys(request, UserAPIKeyAuth(), page=1, size=2)
+    print("pagination response=", response)
+    assert len(response["keys"]) == 2
+    assert response["current_page"] == 1
+
+    # Test filtering by user_id
+
+    unique_id = str(uuid.uuid4())
+    team_id = f"key-list-team-{unique_id}"
+    key_alias = f"key-list-alias-{unique_id}"
+    user_id = f"key-list-user-{unique_id}"
+    response = await new_user(
+        data=NewUserRequest(
+            user_id=f"key-list-user-{unique_id}",
+            user_role=LitellmUserRoles.INTERNAL_USER,
+            key_alias=f"key-list-alias-{unique_id}",
+        ),
+        user_api_key_dict=UserAPIKeyAuth(user_role=LitellmUserRoles.PROXY_ADMIN),
+    )
+
+    _key = hash_token(response.key)
+
+    await asyncio.sleep(2)
+
+    # Test filtering by user_id
+    response = await list_keys(
+        request, UserAPIKeyAuth(), user_id=user_id, page=1, size=10
+    )
+    print("filtered user_id response=", response)
+    assert len(response["keys"]) == 1
+    assert _key in response["keys"]
+
+    # Test filtering by key_alias
+    response = await list_keys(
+        request, UserAPIKeyAuth(), key_alias=key_alias, page=1, size=10
+    )
+    assert len(response["keys"]) == 1
+    assert _key in response["keys"]
+
+
+@pytest.mark.asyncio
+async def test_key_list_unsupported_params(prisma_client):
+    """
+    Test the list_keys function:
+    - Test unsupported params
+    """
+
+    from litellm.proxy.proxy_server import hash_token
+
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    await litellm.proxy.proxy_server.prisma_client.connect()
+
+    request = Request(scope={"type": "http", "query_string": b"alias=foo"})
+
+    try:
+        await list_keys(request, UserAPIKeyAuth(), page=1, size=10)
+        pytest.fail("Expected this call to fail")
+    except Exception as e:
+        print("error str=", str(e.message))
+        error_str = str(e.message)
+        assert "Unsupported parameter" in error_str
+        pass
+
+
+@pytest.mark.asyncio
+async def test_auth_vertex_ai_route(prisma_client):
+    """
+    If user is premium user and vertex-ai route is used. Assert Virtual Key checks are run
+    """
+    litellm.set_verbose = True
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "premium_user", True)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    await litellm.proxy.proxy_server.prisma_client.connect()
+
+    route = "/vertex-ai/publishers/google/models/gemini-1.5-flash-001:generateContent"
+    request = Request(scope={"type": "http"})
+    request._url = URL(url=route)
+    request._headers = {"Authorization": "Bearer sk-12345"}
+    try:
+        await user_api_key_auth(request=request, api_key="Bearer " + "sk-12345")
+        pytest.fail("Expected this call to fail. User is over limit.")
+    except Exception as e:
+        print(vars(e))
+        print("error str=", str(e.message))
+        error_str = str(e.message)
+        assert e.code == "401"
+        assert "Invalid proxy server token passed" in error_str
+
+        pass
+
+
+@pytest.mark.asyncio
+async def test_service_accounts(prisma_client):
+    """
+    Do not delete
+    this is the Admin UI flow
+    """
+    # Make a call to a key with model = `all-proxy-models` this is an Alias from LiteLLM Admin UI
+    setattr(litellm.proxy.proxy_server, "prisma_client", prisma_client)
+    setattr(litellm.proxy.proxy_server, "master_key", "sk-1234")
+    setattr(
+        litellm.proxy.proxy_server,
+        "general_settings",
+        {"service_account_settings": {"enforced_params": ["user"]}},
+    )
+
+    await litellm.proxy.proxy_server.prisma_client.connect()
+
+    request = GenerateKeyRequest(
+        metadata={"service_account_id": f"prod-service-{uuid.uuid4()}"},
+    )
+    response = await generate_key_fn(
+        data=request,
+    )
+
+    print("key generated=", response)
+    generated_key = response.key
+    bearer_token = "Bearer " + generated_key
+    # make a bad /chat/completions call expect it to fail
+
+    request = Request(scope={"type": "http"})
+    request._url = URL(url="/chat/completions")
+
+    async def return_body():
+        return b'{"model": "gemini-pro-vision"}'
+
+    request.body = return_body
+
+    # use generated key to auth in
+    print("Bearer token being sent to user_api_key_auth() - {}".format(bearer_token))
+    try:
+        result = await user_api_key_auth(request=request, api_key=bearer_token)
+        pytest.fail("Expected this call to fail. Bad request using service account")
+    except Exception as e:
+        print("error str=", str(e.message))
+        assert "This is a required param for service account" in str(e.message)
+
+    # make a good /chat/completions call it should pass
+    async def good_return_body():
+        return b'{"model": "gemini-pro-vision", "user": "foo"}'
+
+    request.body = good_return_body
+
+    result = await user_api_key_auth(request=request, api_key=bearer_token)
+    print("response from user_api_key_auth", result)
+
+    setattr(litellm.proxy.proxy_server, "general_settings", {})
