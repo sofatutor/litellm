@@ -1,0 +1,25 @@
+assistant_settings:
+  custom_llm_provider: openai
+  litellm_params:
+    api_key: os.environ/OPENAI_API_KEY
+litellm_settings:
+  telemetry: True
+  success_callback: ["cloudwatch"]
+  cloudwatch_callback_params:
+    log_group_name: /litellm
+    aws_region: eu-central-1
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  store_model_in_db: True
+
+router_settings:
+  redis_host: "redis"
+  redis_port: 6379
+  num_retries: 5
+  timeout: 2
+
+cache:
+  type: "redis"
+  host: "redis"
+  port: 6379
