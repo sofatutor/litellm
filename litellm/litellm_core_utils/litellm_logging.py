@@ -726,6 +726,7 @@ class Logging:
                         start_time=start_time,
                         end_time=end_time,
                         logging_obj=self,
+                        status="success",
                     )
                 )
                 self.model_call_details["response_cost"] = None
