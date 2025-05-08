@@ -301,3 +301,42 @@ async def test_speech_litellm_vertex_async_with_voice_ssml():
             "voice": {"languageCode": "en-UK", "name": "en-UK-Studio-O"},
             "audioConfig": {"audioEncoding": "LINEAR22", "speakingRate": "10"},
         }
+
+
+@pytest.mark.asyncio
+def test_audio_speech_instructions_param():
+    """
+    Test that the 'instructions' parameter is passed to the OpenAI API call.
+    """
+    from unittest.mock import patch, MagicMock
+    model = "openai/tts-1"
+    instructions = "Say this with excitement!"
+    # Patch the OpenAI client call
+    with patch("litellm.llms.OpenAI.openai.OpenAIChatCompletion.audio_speech") as mock_audio_speech:
+        mock_audio_speech.return_value = MagicMock()
+        response = litellm.speech(
+            model=model,
+            voice="alloy",
+            input="the quick brown fox jumped over the lazy dogs",
+            instructions=instructions,
+        )
+        # Check that 'instructions' is in the call
+        called_kwargs = mock_audio_speech.call_args.kwargs
+        assert "optional_params" in called_kwargs
+        assert called_kwargs["optional_params"].get("instructions") == instructions
+
+    # Async version
+    import asyncio
+    async def run_async():
+        with patch("litellm.llms.OpenAI.openai.OpenAIChatCompletion.audio_speech") as mock_audio_speech:
+            mock_audio_speech.return_value = MagicMock()
+            await litellm.aspeech(
+                model=model,
+                voice="alloy",
+                input="the quick brown fox jumped over the lazy dogs",
+                instructions=instructions,
+            )
+            called_kwargs = mock_audio_speech.call_args.kwargs
+            assert "optional_params" in called_kwargs
+            assert called_kwargs["optional_params"].get("instructions") == instructions
+    asyncio.run(run_async())

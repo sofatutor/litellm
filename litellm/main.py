@@ -4908,6 +4908,10 @@ def speech(
         optional_params["response_format"] = response_format
     if speed is not None:
         optional_params["speed"] = speed  # type: ignore
+    # Add support for 'instructions' parameter
+    instructions = kwargs.get("instructions")
+    if instructions is not None:
+        optional_params["instructions"] = instructions
 
     if timeout is None:
         timeout = litellm.request_timeout
