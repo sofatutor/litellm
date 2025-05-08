@@ -248,7 +248,8 @@ add_function_to_prompt: bool = (
 client_session: Optional[httpx.Client] = None
 aclient_session: Optional[httpx.AsyncClient] = None
 model_fallbacks: Optional[List] = None  # Deprecated for 'litellm.fallbacks'
-model_cost_map_url: str = (
+model_cost_map_url: str = os.getenv(
+    "LITELLM_MODEL_COST_MAP_URL",
     "https://raw.githubusercontent.com/sofatutor/litellm/sofatutor/model_prices_and_context_window.json"
 )
 suppress_debug_info = False
