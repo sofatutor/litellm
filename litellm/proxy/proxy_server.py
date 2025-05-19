@@ -721,9 +721,19 @@ async def openai_exception_handler(request: Request, exc: ProxyException):
     )
 
 def openai_exception_error_code(exc: ProxyException):
-    try:
-        return int(exc.code)
-    except (TypeError, ValueError):
+    # NOTE: DO NOT MODIFY THIS, its crucial to map to Openai exceptions
+    if exc.code:
+        try:
+            if isinstance(exc.code, int) or exc.code.isdigit():
+                return int(exc.code)
+            else:
+                # Common error code types from OpenAI
+                if exc.type == "invalid_request_error":
+                    return status.HTTP_400_BAD_REQUEST
+                return status.HTTP_400_BAD_REQUEST  # Default to 400 for client errors
+        except (TypeError, ValueError):
+            return status.HTTP_500_INTERNAL_SERVER_ERROR
+    else:
         return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
@@ -748,11 +758,12 @@ def parse_openai_error(error_msg):
                 
                 if openai_error_dict and "error" in openai_error_dict:
                     error_details = openai_error_dict["error"]
+                    # Use HTTP status code instead of OpenAI error code string for easier conversion
                     return {
                         "message": error_details.get("message", error_msg),
                         "type": error_details.get("type", "None"),
                         "param": error_details.get("param", "None"),
-                        "code": error_details.get("code", openai_status_code),
+                        "code": openai_status_code,  # Use the HTTP status code (400) from the error message instead of the string code
                     }
     except Exception:
         pass
