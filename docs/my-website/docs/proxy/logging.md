@@ -1197,7 +1197,6 @@ This will log all successful LLM calls to s3 Bucket
 ```shell
 AWS_ACCESS_KEY_ID = ""
 AWS_SECRET_ACCESS_KEY = ""
-AWS_REGION_NAME = ""
 ```
 
 **Step 2**: Create a `config.yaml` file and set `litellm_settings`: `success_callback`
@@ -2487,3 +2486,51 @@ litellm_settings:
 `thresholds` are not required by default, but you can tune the values to your needs.
 Default values is `4` for all categories
 ::: -->
+
+## CloudWatch Logging
+
+Log LLM input/output and Assistants API interactions to AWS CloudWatch.
+
+| Property | Details |
+|----------|---------|
+| Description | Log LLM calls and Assistants API interactions to AWS CloudWatch |
+| Supports Assistants API | Yes - add_messages, get_assistants, run_thread |
+
+#### Basic Setup
+
+1. Add `cloudwatch` to your config.yaml
+```yaml
+litellm_settings:
+  success_callback: ["cloudwatch"]
+  cloudwatch_callback_params:
+    log_group_name: /litellm
+    aws_region: us-west-2
+```
+
+2. Set AWS credentials as environment variables
+```shell
+AWS_ACCESS_KEY_ID=""
+AWS_SECRET_ACCESS_KEY=""
+AWS_REGION="us-west-2"
+```
+
+3. Start the proxy
+```
+litellm --config /path/to/config.yaml
+```
+
+#### Fields Logged to CloudWatch
+
+- Standard LLM request/response data
+- Assistants API endpoints: `add_messages`, `get_assistants`, `run_thread`
+- All logs include a unique `litellm_call_id` for tracing
+
+#### CloudWatch Logs Insights Queries
+
+Search by call type:
+```
+fields @timestamp, thread_id, call_type, litellm_call_id, duration_ms
+| filter call_type = "run_thread"
+| sort @timestamp desc
+| limit 20
+```
