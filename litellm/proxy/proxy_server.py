@@ -5193,7 +5193,16 @@ async def add_messages(
         verbose_proxy_logger.error(
             f"litellm.proxy.proxy_server.add_messages(): Exception occurred - {str(e)}"
         )
-        verbose_proxy_logger.debug(traceback.format_exc())
+
+        error_type = type(e).__name__
+        error_module = type(e).__module__
+        verbose_proxy_logger.error(
+            f"DEBUG ERROR INFO: Type={error_module}.{error_type}, has code={hasattr(e, 'code')}, code value={getattr(e, 'code', 'N/A')}, has status_code={hasattr(e, 'status_code')}, status_code value={getattr(e, 'status_code', 'N/A')}"
+        )
+
+        # Log the full traceback
+        verbose_proxy_logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        # verbose_proxy_logger.debug(traceback.format_exc())
         if isinstance(e, HTTPException):
             raise ProxyException(
                 message=getattr(e, "message", str(e.detail)),
