@@ -708,9 +708,7 @@ async def openai_exception_handler(request: Request, exc: ProxyException):
     # NOTE: DO NOT MODIFY THIS, its crucial to map to Openai exceptions
     headers = exc.headers
     return JSONResponse(
-        status_code=(
-            int(exc.code) if exc.code else status.HTTP_500_INTERNAL_SERVER_ERROR
-        ),
+        status_code=openai_exception_error_code(exc),
         content={
             "error": {
                 "message": exc.message,
@@ -721,6 +719,12 @@ async def openai_exception_handler(request: Request, exc: ProxyException):
         },
         headers=headers,
     )
+
+def openai_exception_error_code(exc: ProxyException):
+    try:
+        return int(exc.code)
+    except (TypeError, ValueError):
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 router = APIRouter()
