@@ -727,6 +727,75 @@ def openai_exception_error_code(exc: ProxyException):
         return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
+def parse_openai_error(error_msg):
+    """
+    Parse OpenAI error details from a stringified APIConnectionError message.
+    
+    Returns a dict with keys: message, type, param, code or None if parsing fails.
+    """
+    try:
+        # Check if this is an APIConnectionError with OpenAI error details
+        if "APIConnectionError: openai - Error code:" in error_msg:
+            # Extract status code
+            status_match = re.search(r"Error code: (\d+)", error_msg)
+            openai_status_code = int(status_match.group(1)) if status_match else 500
+            
+            # Extract error JSON
+            error_json_match = re.search(r"({.*})", error_msg)
+            if error_json_match:
+                error_json_str = error_json_match.group(1)
+                openai_error_dict = json.loads(error_json_str)
+                
+                if openai_error_dict and "error" in openai_error_dict:
+                    error_details = openai_error_dict["error"]
+                    return {
+                        "message": error_details.get("message", error_msg),
+                        "type": error_details.get("type", "None"),
+                        "param": error_details.get("param", "None"),
+                        "code": error_details.get("code", openai_status_code),
+                    }
+    except Exception:
+        pass
+    return None
+
+
+async def handle_proxy_exception(e, function_name, user_api_key_dict, data, proxy_logging_obj):
+    """
+    Centralized error handling for proxy requests.
+    
+    Logs the error, calls failure hooks, and raises a properly formatted ProxyException.
+    """
+    await proxy_logging_obj.post_call_failure_hook(
+        user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
+    )
+    verbose_proxy_logger.error(
+        f"litellm.proxy.proxy_server.{function_name}(): Exception occurred - {str(e)}"
+    )
+    verbose_proxy_logger.debug(traceback.format_exc())
+    
+    # Parse OpenAI errors if present
+    openai_error = parse_openai_error(str(e))
+    if openai_error:
+        raise ProxyException(**openai_error)
+        
+    # Otherwise handle normally
+    if isinstance(e, HTTPException):
+        raise ProxyException(
+            message=getattr(e, "message", str(e.detail)),
+            type=getattr(e, "type", "None"),
+            param=getattr(e, "param", "None"),
+            code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
+        )
+    else:
+        error_msg = f"{str(e)}"
+        raise ProxyException(
+            message=getattr(e, "message", error_msg),
+            type=getattr(e, "type", "None"),
+            param=getattr(e, "param", "None"),
+            code=getattr(e, "code", getattr(e, "status_code", 500)),
+        )
+
+
 router = APIRouter()
 origins = ["*"]
 
@@ -5187,38 +5256,7 @@ async def add_messages(
 
         return response
     except Exception as e:
-        await proxy_logging_obj.post_call_failure_hook(
-            user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
-        )
-        verbose_proxy_logger.error(
-            f"litellm.proxy.proxy_server.add_messages(): Exception occurred - {str(e)}"
-        )
-
-        error_type = type(e).__name__
-        error_module = type(e).__module__
-        verbose_proxy_logger.error(
-            f"DEBUG ERROR INFO: Type={error_module}.{error_type}, has code={hasattr(e, 'code')}, code value={getattr(e, 'code', 'N/A')}, has status_code={hasattr(e, 'status_code')}, status_code value={getattr(e, 'status_code', 'N/A')}"
-        )
-
-        # Log the full traceback
-        verbose_proxy_logger.error(f"Full traceback:\n{traceback.format_exc()}")
-        # verbose_proxy_logger.debug(traceback.format_exc())
-        if isinstance(e, HTTPException):
-            raise ProxyException(
-                message=getattr(e, "message", str(e.detail)),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
-            )
-        else:
-            error_msg = f"{str(e)}"
-            raise ProxyException(
-                message=getattr(e, "message", error_msg),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "code", getattr(e, "status_code", 500)),
-            )
-
+        await handle_proxy_exception(e, "add_messages", user_api_key_dict, data, proxy_logging_obj)
 
 @router.get(
     "/v1/threads/{thread_id}/messages",
@@ -5298,31 +5336,7 @@ async def get_messages(
 
         return response
     except Exception as e:
-        await proxy_logging_obj.post_call_failure_hook(
-            user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
-        )
-        verbose_proxy_logger.error(
-            "litellm.proxy.proxy_server.get_messages(): Exception occured - {}".format(
-                str(e)
-            )
-        )
-        verbose_proxy_logger.debug(traceback.format_exc())
-        if isinstance(e, HTTPException):
-            raise ProxyException(
-                message=getattr(e, "message", str(e.detail)),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
-            )
-        else:
-            error_msg = f"{str(e)}"
-            raise ProxyException(
-                message=getattr(e, "message", error_msg),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "code", getattr(e, "status_code", 500)),
-            )
-
+        await handle_proxy_exception(e, "get_messages", user_api_key_dict, data, proxy_logging_obj)
 
 @router.post(
     "/v1/threads/{thread_id}/runs",
@@ -5416,29 +5430,7 @@ async def run_thread(
 
         return response
     except Exception as e:
-        await proxy_logging_obj.post_call_failure_hook(
-            user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
-        )
-        verbose_proxy_logger.error(
-            f"litellm.proxy.proxy_server.run_thread(): Exception occurred - {str(e)}"
-        )
-        verbose_proxy_logger.debug(traceback.format_exc())
-        if isinstance(e, HTTPException):
-            raise ProxyException(
-                message=getattr(e, "message", str(e.detail)),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
-            )
-        else:
-            error_msg = f"{str(e)}"
-            raise ProxyException(
-                message=getattr(e, "message", error_msg),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "code", getattr(e, "status_code", 500)),
-            )
-
+        await handle_proxy_exception(e, "run_thread", user_api_key_dict, data, proxy_logging_obj)
 
 @router.post(
     "/v1/moderations",
@@ -5537,30 +5529,7 @@ async def moderations(
 
         return response
     except Exception as e:
-        await proxy_logging_obj.post_call_failure_hook(
-            user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
-        )
-        verbose_proxy_logger.exception(
-            "litellm.proxy.proxy_server.moderations(): Exception occured - {}".format(
-                str(e)
-            )
-        )
-        if isinstance(e, HTTPException):
-            raise ProxyException(
-                message=getattr(e, "message", str(e)),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
-            )
-        else:
-            error_msg = f"{str(e)}"
-            raise ProxyException(
-                message=getattr(e, "message", error_msg),
-                type=getattr(e, "type", "None"),
-                param=getattr(e, "param", "None"),
-                code=getattr(e, "status_code", 500),
-            )
-
+        await handle_proxy_exception(e, "moderations", user_api_key_dict, data, proxy_logging_obj)
 
 #### DEV UTILS ####
 
@@ -5635,7 +5604,6 @@ async def token_counter(request: TokenCountRequest):
         tokenizer_type=tokenizer_used,
     )
 
-
 @router.get(
     "/utils/supported_openai_params",
     tags=["llm utils"],
@@ -5665,7 +5633,6 @@ async def supported_openai_params(model: str):
             status_code=400, detail={"error": "Could not map model={}".format(model)}
         )
 
-
 @router.post(
     "/utils/transform_request",
     tags=["llm utils"],
@@ -5676,7 +5643,6 @@ async def transform_request(request: TransformRequestBody):
     from litellm.utils import return_raw_request
 
     return return_raw_request(endpoint=request.call_type, kwargs=request.request_body)
-
 
 async def _check_if_model_is_user_added(
     models: List[Dict],
@@ -5708,7 +5674,6 @@ async def _check_if_model_is_user_added(
                 filtered_models.append(model)
     return filtered_models
 
-
 def _check_if_model_is_team_model(
     models: List[DeploymentTypedDict], user_row: LiteLLM_UserTable
 ) -> List[Dict]:
@@ -5727,7 +5692,6 @@ def _check_if_model_is_team_model(
                 user_team_models.append(cast(Dict, model))
 
     return user_team_models
-
 
 async def non_admin_all_models(
     all_models: List[Dict],
@@ -5772,7 +5736,6 @@ async def non_admin_all_models(
     # de-duplicate models. Only return unique model ids
     unique_models = _deduplicate_litellm_router_models(models=all_models)
     return unique_models
-
 
 @router.get(
     "/v2/model/info",
@@ -5885,7 +5848,6 @@ async def model_info_v2(
 
     verbose_proxy_logger.debug("all_models: %s", all_models)
     return {"data": all_models}
-
 
 @router.get(
     "/model/streaming_metrics",
