@@ -60,6 +60,7 @@ from litellm.integrations.custom_guardrail import CustomGuardrail
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.integrations.SlackAlerting.slack_alerting import SlackAlerting
 from litellm.integrations.SlackAlerting.utils import _add_langfuse_trace_id_to_alert
+from litellm.integrations.cloud_watch import CloudWatchLogger
 from litellm.litellm_core_utils.litellm_logging import Logging
 from litellm.llms.custom_httpx.httpx_handler import HTTPHandler
 from litellm.proxy._types import (
@@ -476,6 +477,9 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
+            "run_thread",
+            "get_assistants",
+            "add_messages",
         ],
     ) -> None:
         pass
@@ -494,6 +498,9 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
+            "run_thread",
+            "get_assistants",
+            "add_messages",
         ],
     ) -> dict:
         pass
@@ -511,6 +518,9 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
+            "run_thread",
+            "get_assistants",
+            "add_messages",
         ],
     ) -> Optional[dict]:
         """

@@ -1461,7 +1461,7 @@ class ProxyConfig:
             litellm.default_in_memory_ttl = cache_params["default_in_memory_ttl"]
 
         if "default_redis_ttl" in cache_params:
-            litellm.default_redis_ttl = cache_params["default_in_redis_ttl"]
+            litellm.default_redis_ttl = cache_params["default_redis_ttl"]
 
         litellm.cache = Cache(**cache_params)
 
@@ -3632,6 +3632,26 @@ async def completion(  # noqa: PLR0915
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="completion",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="text_completion",
+        )
+
         # override with user settings, these are params passed via cli
         if user_temperature:
             data["temperature"] = user_temperature
@@ -3647,11 +3667,6 @@ async def completion(  # noqa: PLR0915
         # get the actual model name
         if data["model"] in litellm.model_alias_map:
             data["model"] = litellm.model_alias_map[data["model"]]
-
-        ### CALL HOOKS ### - modify incoming data before calling the model
-        data = await proxy_logging_obj.pre_call_hook(  # type: ignore
-            user_api_key_dict=user_api_key_dict, data=data, call_type="text_completion"
-        )
 
         ### ROUTE THE REQUESTs ###
         llm_call = await route_request(
@@ -3851,6 +3866,26 @@ async def embeddings(  # noqa: PLR0915
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="embeddings",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="embeddings",
+        )
+
         data["model"] = (
             general_settings.get("embedding_model", None)  # server default
             or user_model  # model name passed via cli args
@@ -3894,11 +3929,6 @@ async def embeddings(  # noqa: PLR0915
                                 )
                             data["input"] = input_list
                             break
-
-        ### CALL HOOKS ### - modify incoming data / reject request before calling the model
-        data = await proxy_logging_obj.pre_call_hook(
-            user_api_key_dict=user_api_key_dict, data=data, call_type="embeddings"
-        )
 
         tasks = []
         tasks.append(
@@ -4029,6 +4059,26 @@ async def image_generation(
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="image_generation",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="image_generation",
+        )
+
         data["model"] = (
             general_settings.get("image_generation_model", None)  # server default
             or user_model  # model name passed via cli args
@@ -4042,11 +4092,6 @@ async def image_generation(
         # get the actual model name
         if data["model"] in litellm.model_alias_map:
             data["model"] = litellm.model_alias_map[data["model"]]
-
-        ### CALL HOOKS ### - modify incoming data / reject request before calling the model
-        data = await proxy_logging_obj.pre_call_hook(
-            user_api_key_dict=user_api_key_dict, data=data, call_type="image_generation"
-        )
 
         ## ROUTE TO CORRECT ENDPOINT ##
         llm_call = await route_request(
@@ -4152,16 +4197,31 @@ async def audio_speech(
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="audio_speech",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="audio_speech",
+        )
+
         if data.get("user", None) is None and user_api_key_dict.user_id is not None:
             data["user"] = user_api_key_dict.user_id
 
         if user_model:
             data["model"] = user_model
-
-        ### CALL HOOKS ### - modify incoming data / reject request before calling the model
-        data = await proxy_logging_obj.pre_call_hook(
-            user_api_key_dict=user_api_key_dict, data=data, call_type="image_generation"
-        )
 
         ## ROUTE TO CORRECT ENDPOINT ##
         llm_call = await route_request(
@@ -4264,6 +4324,26 @@ async def audio_transcriptions(
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="audio_transcriptions",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="audio_transcription",
+        )
+
         if data.get("user", None) is None and user_api_key_dict.user_id is not None:
             data["user"] = user_api_key_dict.user_id
 
@@ -4297,13 +4377,6 @@ async def audio_transcriptions(
         file_object.name = file.filename
         data["file"] = file_object
         try:
-            ### CALL HOOKS ### - modify incoming data / reject request before calling the model
-            data = await proxy_logging_obj.pre_call_hook(
-                user_api_key_dict=user_api_key_dict,
-                data=data,
-                call_type="audio_transcription",
-            )
-
             ## ROUTE TO CORRECT ENDPOINT ##
             llm_call = await route_request(
                 data=data,
@@ -4504,6 +4577,27 @@ async def get_assistants(
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="get_assistants",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="get_assistants",
+        )
+
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
@@ -4543,9 +4637,7 @@ async def get_assistants(
             user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
         )
         verbose_proxy_logger.error(
-            "litellm.proxy.proxy_server.get_assistants(): Exception occured - {}".format(
-                str(e)
-            )
+            f"litellm.proxy.proxy_server.get_assistants(): Exception occurred - {str(e)}"
         )
         verbose_proxy_logger.debug(traceback.format_exc())
         if isinstance(e, HTTPException):
@@ -4602,6 +4694,15 @@ async def create_assistant(
             version=version,
             proxy_config=proxy_config,
         )
+
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
@@ -4700,6 +4801,15 @@ async def delete_assistant(
             proxy_config=proxy_config,
         )
 
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
@@ -4797,6 +4907,15 @@ async def create_threads(
             proxy_config=proxy_config,
         )
 
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
@@ -4891,6 +5010,15 @@ async def get_thread(
             version=version,
             proxy_config=proxy_config,
         )
+
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
@@ -4991,12 +5119,38 @@ async def add_messages(
             proxy_config=proxy_config,
         )
 
+        # Initialize logging object
+        data["litellm_call_id"] = request.headers.get(
+            "x-litellm-call-id", str(uuid.uuid4())
+        )
+        logging_obj, data = litellm.utils.function_setup(
+            original_function="add_messages",
+            rules_obj=litellm.utils.Rules(),
+            start_time=datetime.now(),
+            **data,
+        )
+
+        data["litellm_logging_obj"] = logging_obj
+
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(
+            user_api_key_dict=user_api_key_dict,
+            data=data,
+            call_type="add_messages",
+        )
+
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
                 status_code=500, detail={"error": CommonProxyErrors.no_llm_router.value}
             )
         response = await llm_router.a_add_message(thread_id=thread_id, **data)
+
+        ### CALL HOOKS ### - modify outgoing data
+        response = await proxy_logging_obj.post_call_success_hook(
+            data=data, user_api_key_dict=user_api_key_dict, response=response
+        )
 
         ### ALERTING ###
         asyncio.create_task(
@@ -5010,6 +5164,8 @@ async def add_messages(
         model_id = hidden_params.get("model_id", None) or ""
         cache_key = hidden_params.get("cache_key", None) or ""
         api_base = hidden_params.get("api_base", None) or ""
+        response_cost = hidden_params.get("response_cost", None) or ""
+        litellm_call_id = hidden_params.get("litellm_call_id", logging_obj.litellm_call_id) or ""
 
         fastapi_response.headers.update(
             ProxyBaseLLMRequestProcessing.get_custom_headers(
@@ -5018,7 +5174,8 @@ async def add_messages(
                 cache_key=cache_key,
                 api_base=api_base,
                 version=version,
-                model_region=getattr(user_api_key_dict, "allowed_model_region", ""),
+                call_id=litellm_call_id,
+                response_cost=response_cost,
                 request_data=data,
                 hidden_params=hidden_params,
             )
@@ -5030,9 +5187,7 @@ async def add_messages(
             user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
         )
         verbose_proxy_logger.error(
-            "litellm.proxy.proxy_server.add_messages(): Exception occured - {}".format(
-                str(e)
-            )
+            f"litellm.proxy.proxy_server.add_messages(): Exception occurred - {str(e)}"
         )
         verbose_proxy_logger.debug(traceback.format_exc())
         if isinstance(e, HTTPException):
@@ -5085,6 +5240,15 @@ async def get_messages(
             version=version,
             proxy_config=proxy_config,
         )
+
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
 
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
@@ -5183,6 +5347,15 @@ async def run_thread(
             proxy_config=proxy_config,
         )
 
+                # Initialize logging object
+        data["litellm_call_id"] = request.headers.get("x-litellm-call-id", str(uuid.uuid4()))
+        logging_obj, data = litellm.utils.function_setup(original_function="run_thread", rules_obj=litellm.utils.Rules(), start_time=datetime.now(), **data,)
+        data["litellm_logging_obj"] = logging_obj
+        # Log the request
+        await proxy_logging_obj.pre_call_hook(user_api_key_dict=user_api_key_dict, data=data, call_type="run_thread",)
+        
+
+
         # for now use custom_llm_provider=="openai" -> this will change as LiteLLM adds more providers for acreate_batch
         if llm_router is None:
             raise HTTPException(
@@ -5234,9 +5407,7 @@ async def run_thread(
             user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
         )
         verbose_proxy_logger.error(
-            "litellm.proxy.proxy_server.run_thread(): Exception occured - {}".format(
-                str(e)
-            )
+            f"litellm.proxy.proxy_server.run_thread(): Exception occurred - {str(e)}"
         )
         verbose_proxy_logger.debug(traceback.format_exc())
         if isinstance(e, HTTPException):
