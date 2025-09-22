@@ -23,7 +23,7 @@ This document tracks the changes required to add AWS CloudWatch logging support 
 2. **litellm/litellm_core_utils/litellm_logging.py**
    - [x] Attempt to apply patch (conflicts detected)
    - [x] Review .rej file and patch contents
-   - [x] Identify where CloudWatch and Assistants API logging changes need to be integrated
+   - [x] Identify where CloudWatch logging changes need to be integrated
    - [x] Manually merge relevant changes
    - [x] Test logging functionality
 
@@ -59,7 +59,6 @@ This document tracks the changes required to add AWS CloudWatch logging support 
 
 ### Existing Tests Updated
 - [x] Updated `test_embedding_input_array_of_tokens` in `tests/litellm/proxy/test_proxy_server.py` to handle detailed proxy_server_request logging data
-- [x] Fixed `tests/litellm/proxy/test_assistants_logging.py` to properly mock DualCache for ProxyLogging initialization
 - [x] Verified all tests pass with our changes (432 tests in the proxy module passed)
 
 ### New Tests Implemented
@@ -68,15 +67,7 @@ This document tracks the changes required to add AWS CloudWatch logging support 
    - [x] Created/Updated `tests/litellm/integrations/test_cloud_watch.py` with:
      - Unit tests for CloudWatch logger initialization
      - Mocked AWS CloudWatch API calls to test log delivery
-     - Tests for different log event formats and Assistants API integration
-
-2. **Assistants API Logging Tests**
-   - [x] Created comprehensive tests for Assistants API endpoint logging in `tests/litellm/proxy/test_assistants_logging.py`:
-     - `test_add_messages_logging` to verify log hooks for message creation
-     - `test_get_assistants_logging` to test listing assistants logs
-     - `test_run_thread_logging` to verify thread execution logging
-     - `test_call_id_generation` to verify automatic creation of call IDs
-     - `test_proxy_logging_assistants_hooks` to verify all call types are supported
+     - Tests for different log event formats
 
 3. **Test Fixes**
    - [x] Fixed test initialization issues with `ProxyLogging` class by properly mocking the required `user_api_key_cache` parameter

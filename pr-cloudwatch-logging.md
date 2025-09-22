@@ -31,7 +31,6 @@ Implements complete CloudWatch logging integration. This allows:
 ### Testing
 - Added comprehensive tests for CloudWatch integration in `tests/litellm/integrations/test_cloud_watch.py`
 - Fixed test initialization issues with proper DualCache mocking
-- All tests pass with the changes (940 passed, 10 skipped)
 
 ### Configuration
 CloudWatch logging can be configured in LiteLLM config using:
