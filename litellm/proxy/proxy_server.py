@@ -4640,7 +4640,7 @@ async def moderations(
             "x-litellm-call-id", str(uuid.uuid4())
         )
         logging_obj, data = litellm.utils.function_setup(
-            original_function="image_generation",
+            original_function="moderation",
             rules_obj=litellm.utils.Rules(),
             start_time=datetime.now(),
             **data,
@@ -4652,7 +4652,7 @@ async def moderations(
         await proxy_logging_obj.pre_call_hook(
             user_api_key_dict=user_api_key_dict,
             data=data,
-            call_type="image_generation",
+            call_type="moderation",
         )
 
         data["model"] = (
