@@ -89,24 +89,6 @@ class CloudWatchLogger:
                 metadata = litellm_params.get("metadata", {}) or {}
                 payload = {key: value for key, value in metadata.items() if key not in ["headers", "endpoint", "caching_groups", "previous_models"]}
 
-            if isinstance(response_obj, openai.lib.streaming._assistants.AsyncAssistantEventHandler):
-                current_run = response_obj.current_run
-                payload["id"] = current_run.id
-                payload["assistant_id"] = current_run.assistant_id
-                self.log_stream_name = payload["thread_id"] = current_run.thread_id
-                payload["completion_tokens"] = current_run.usage.completion_tokens
-                payload["prompt_tokens"] = current_run.usage.prompt_tokens
-                payload["total_tokens"] = current_run.usage.total_tokens
-                payload["created_at"] = current_run.created_at
-                payload["completed_at"] = current_run.completed_at
-                payload["failed_at"] = current_run.failed_at
-                payload["cancelled_at"] = current_run.cancelled_at
-                if response_obj.current_message_snapshot is not None:
-                    payload["assistant_message"] = str(response_obj.current_message_snapshot.content)
-                else:
-                    payload["assistant_message"] = ""
-                payload.pop("response", None) # remove response from payload as it's not json serializable
-
             log_event_message = json.dumps(payload)
 
             timestamp = int(datetime.datetime.now().timestamp() * 1000)

@@ -477,9 +477,6 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
-            "run_thread",
-            "get_assistants",
-            "add_messages",
         ],
     ) -> None:
         pass
@@ -498,9 +495,6 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
-            "run_thread",
-            "get_assistants",
-            "add_messages",
         ],
     ) -> dict:
         pass
@@ -518,9 +512,6 @@ class ProxyLogging:
             "audio_transcription",
             "pass_through_endpoint",
             "rerank",
-            "run_thread",
-            "get_assistants",
-            "add_messages",
         ],
     ) -> Optional[dict]:
         """

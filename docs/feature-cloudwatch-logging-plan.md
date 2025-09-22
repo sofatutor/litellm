@@ -1,19 +1,18 @@
-# Feature: CloudWatch & Assistants API Logging Support
+# Feature: CloudWatch Logging Support
 
 > **Note:** All relevant patch diffs for this feature are available in `/tmp/patch_*.diff`. Refer to these files for manual or automated patch application as needed.
 
 ## Summary
-This document tracks the changes required to add AWS CloudWatch logging and enhanced Assistants API logging support to LiteLLM. The goal is to integrate new logging modules, refactor callback handling, and ensure robust logging for both CloudWatch and the Assistants API.
+This document tracks the changes required to add AWS CloudWatch logging support to LiteLLM. The goal is to integrate new logging modules, refactor callback handling, and ensure robust logging for CloudWatch.
 
 ## Checklist
 - [x] Identify all relevant code changes from the diff
 - [x] Apply new CloudWatch integration module
-- [x] Refactor core logging utilities to support CloudWatch and Assistants API
+- [x] Refactor core logging utilities to support CloudWatch
 - [x] Update proxy and utility modules for new logging hooks and call types
 - [x] Test logging functionality in development/staging
 - [x] Document configuration and usage
 - [x] Fix tests to properly handle CloudWatch integration
-- [x] Ensure Assistants API logging tests are working correctly
 
 ## Sequential Application Plan
 
@@ -97,14 +96,8 @@ litellm_settings:
     aws_region: eu-central-1
 ```
 
-For Assistants API logging, the standard logging hooks are automatically enabled for:
-- `add_messages`
-- `get_assistants`
-- `run_thread`
-
 ## Next Steps
 - Consider additional parameterization for CloudWatch logging (e.g., customizable log streams)
-- Explore expanding Assistants API logging to additional endpoints as OpenAI adds them
 - Monitor production usage for any performance impacts
 - Document best practices for log retention and analysis
 
