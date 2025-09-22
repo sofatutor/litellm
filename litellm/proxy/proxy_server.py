@@ -4784,7 +4784,7 @@ async def audio_speech(
         await proxy_logging_obj.pre_call_hook(
             user_api_key_dict=user_api_key_dict,
             data=data,
-            call_type="audio_speech",
+            call_type="pass_through_endpoint",
         )
 
         if data.get("user", None) is None and user_api_key_dict.user_id is not None:
