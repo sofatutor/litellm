@@ -429,6 +429,8 @@ from fastapi.routing import APIRouter
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
+import re
+import json
 
 # import enterprise folder
 enterprise_router = APIRouter()
@@ -784,9 +786,7 @@ async def openai_exception_handler(request: Request, exc: ProxyException):
     # NOTE: DO NOT MODIFY THIS, its crucial to map to Openai exceptions
     headers = exc.headers
     return JSONResponse(
-        status_code=(
-            int(exc.code) if exc.code else status.HTTP_500_INTERNAL_SERVER_ERROR
-        ),
+        status_code=openai_exception_error_code(exc),
         content={
             "error": {
                 "message": exc.message,
@@ -797,6 +797,84 @@ async def openai_exception_handler(request: Request, exc: ProxyException):
         },
         headers=headers,
     )
+
+
+def openai_exception_error_code(exc: ProxyException):
+    # NOTE: DO NOT MODIFY THIS, its crucial to map to Openai exceptions
+    if exc.code:
+        try:
+            if isinstance(exc.code, int) or str(exc.code).isdigit():
+                return int(exc.code)
+            else:
+                # Common error type mapping fallback
+                if exc.type == "invalid_request_error":
+                    return status.HTTP_400_BAD_REQUEST
+                return status.HTTP_400_BAD_REQUEST
+        except (TypeError, ValueError):
+            return status.HTTP_500_INTERNAL_SERVER_ERROR
+    else:
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def parse_openai_error(error_msg):
+    """
+    Parse OpenAI error details from a stringified APIConnectionError message.
+    Returns a dict with keys: message, type, param, code or None if parsing fails.
+    """
+    try:
+        if "APIConnectionError: openai - Error code:" in error_msg:
+            status_match = re.search(r"Error code: (\d+)", error_msg)
+            openai_status_code = int(status_match.group(1)) if status_match else 500
+
+            error_json_match = re.search(r"({.*})", error_msg)
+            if error_json_match:
+                error_json_str = error_json_match.group(1)
+                openai_error_dict = json.loads(error_json_str)
+                if openai_error_dict and "error" in openai_error_dict:
+                    error_details = openai_error_dict["error"]
+                    return {
+                        "message": error_details.get("message", error_msg),
+                        "type": error_details.get("type", "None"),
+                        "param": error_details.get("param", "None"),
+                        "code": openai_status_code,
+                    }
+    except Exception:
+        pass
+    return None
+
+
+async def handle_proxy_exception(e, function_name, user_api_key_dict, data, proxy_logging_obj):
+    """
+    Centralized error handling for proxy requests.
+    Logs the error, calls failure hooks, and raises a properly formatted ProxyException.
+    """
+    await proxy_logging_obj.post_call_failure_hook(
+        user_api_key_dict=user_api_key_dict, original_exception=e, request_data=data
+    )
+    verbose_proxy_logger.error(
+        f"litellm.proxy.proxy_server.{function_name}(): Exception occurred - {str(e)}"
+    )
+    verbose_proxy_logger.debug(traceback.format_exc())
+
+    openai_error = parse_openai_error(str(e))
+    if openai_error:
+        raise ProxyException(**openai_error)
+
+    if isinstance(e, HTTPException):
+        raise ProxyException(
+            message=getattr(e, "message", str(e.detail)),
+            type=getattr(e, "type", "None"),
+            param=getattr(e, "param", "None"),
+            code=getattr(e, "status_code", status.HTTP_400_BAD_REQUEST),
+        )
+    else:
+        error_msg = f"{str(e)}"
+        raise ProxyException(
+            message=getattr(e, "message", error_msg),
+            type=getattr(e, "type", "None"),
+            param=getattr(e, "param", "None"),
+            code=getattr(e, "code", getattr(e, "status_code", 500)),
+        )
 
 
 router = APIRouter()
