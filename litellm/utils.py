@@ -781,6 +781,13 @@ def function_setup(  # noqa: PLR0915
             call_type == CallTypes.aspeech.value or call_type == CallTypes.speech.value
         ):
             messages = kwargs.get("input", "speech")
+            # Populate input for TTS so cost calculator can count characters
+            try:
+                if isinstance(messages, str):
+                    kwargs.setdefault("metadata", {})
+                
+            except Exception:
+                pass
             # Ensure TTS input is recorded on the logging object for character-based
             # pricing in the cost calculator.
             try:
@@ -821,6 +828,14 @@ def function_setup(  # noqa: PLR0915
             kwargs=kwargs,
             applied_guardrails=applied_guardrails,
         )
+
+        # For TTS calls, record the raw input text to assist cost calculation
+        try:
+            if call_type in (CallTypes.aspeech.value, CallTypes.speech.value):
+                if isinstance(kwargs.get("input"), str):
+                    logging_obj.model_call_details["input"] = kwargs.get("input")
+        except Exception:
+            pass
 
         ## check if metadata is passed in
         litellm_params: Dict[str, Any] = {"api_base": ""}
