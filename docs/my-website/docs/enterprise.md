@@ -1,6 +1,11 @@
 import Image from '@theme/IdealImage';
 
 # Enterprise
+
+:::info
+✨ SSO is free for up to 5 users. After that, an enterprise license is required. [Get Started with Enterprise here](https://www.litellm.ai/enterprise)
+:::
+
 For companies that need SSO, user management and professional support for LiteLLM Proxy
 
 :::info
@@ -11,7 +16,7 @@ Get free 7-day trial key [here](https://www.litellm.ai/enterprise#trial)
 
 Includes all enterprise features.
 
-<Image img={require('../img/enterprise_vs_oss.png')} />
+<Image img={require('../img/enterprise_vs_oss_2.png')} />
 
 [**Procurement available via AWS / Azure Marketplace**](./data_security.md#legalcompliance-faqs)
 
@@ -35,7 +40,7 @@ Self-Managed Enterprise deployments require our team to understand your exact ne
 
 ### How does deployment with Enterprise License work? 
 
-You just deploy [our docker image](https://docs.litellm.ai/docs/proxy/deploy) and get an enterprise license key to add to your environment to unlock additional functionality (SSO, Prometheus metrics, etc.). 
+You just deploy [our docker image](https://docs.litellm.ai/docs/proxy/deploy) and get an enterprise license key to add to your environment to unlock additional functionality (SSO, etc.). 
 
 ```env
 LITELLM_LICENSE="eyJ..."

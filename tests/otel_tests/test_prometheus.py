@@ -5,7 +5,7 @@ Unit tests for prometheus metrics
 import pytest
 import aiohttp
 import asyncio
-import uuid
+from litellm._uuid import uuid
 import os
 import sys
 from openai import AsyncOpenAI
@@ -405,7 +405,7 @@ async def test_team_budget_metrics():
 
         # Verify spends match within a small delta (floating point comparison)
         assert (
-            abs(team_info_remaining_budget - first_budget["remaining"]) <= 0.00000
+            abs(team_info_remaining_budget - first_budget["remaining"]) <= 0.001
         ), f"Spend mismatch: Prometheus={team_info_remaining_budget}, Team Info={first_budget['remaining']}"
 
 
@@ -539,7 +539,7 @@ async def test_key_budget_metrics():
 
         # Verify spends match within a small delta (floating point comparison)
         assert (
-            abs(key_info_remaining_budget - first_budget["remaining"]) <= 0.00000
+            abs(key_info_remaining_budget - first_budget["remaining"]) <= 0.001
         ), f"Spend mismatch: Prometheus={key_info_remaining_budget}, Key Info={first_budget['remaining']}"
 
 

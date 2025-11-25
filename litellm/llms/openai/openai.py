@@ -1145,6 +1145,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         api_base: Optional[str] = None,
         client: Optional[AsyncOpenAI] = None,
         max_retries=None,
+        shared_session: Optional["ClientSession"] = None,
     ):
         try:
             openai_aclient: AsyncOpenAI = self._get_openai_client(  # type: ignore
@@ -1154,6 +1155,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                 timeout=timeout,
                 max_retries=max_retries,
                 client=client,
+                shared_session=shared_session,
             )
             headers, response = await self.make_openai_embedding_request(
                 openai_aclient=openai_aclient,
@@ -1217,10 +1219,10 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         client=None,
         aembedding=None,
         max_retries: Optional[int] = None,
+        shared_session: Optional["ClientSession"] = None,
     ) -> EmbeddingResponse:
         super().embedding()
         try:
-            model = model
             data = {"model": model, "input": input, **optional_params}
             max_retries = max_retries or litellm.DEFAULT_MAX_RETRIES
             if not isinstance(max_retries, int):
@@ -1243,6 +1245,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                     timeout=timeout,
                     client=client,
                     max_retries=max_retries,
+                    shared_session=shared_session,
                 )
 
             openai_client: OpenAI = self._get_openai_client(  # type: ignore
@@ -1302,6 +1305,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         api_base: Optional[str] = None,
         client=None,
         max_retries=None,
+        organization: Optional[str] = None,
     ):
         response = None
         try:
@@ -1311,6 +1315,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                 api_base=api_base,
                 timeout=timeout,
                 max_retries=max_retries,
+                organization=organization,
                 client=client,
             )
 
@@ -1345,17 +1350,17 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
         model_response: Optional[ImageResponse] = None,
         client=None,
         aimg_generation=None,
+        organization: Optional[str] = None,
     ) -> ImageResponse:
         data = {}
         try:
-            model = model
             data = {"model": model, "prompt": prompt, **optional_params}
             max_retries = data.pop("max_retries", 2)
             if not isinstance(max_retries, int):
                 raise OpenAIError(status_code=422, message="max retries must be an int")
 
             if aimg_generation is True:
-                return self.aimage_generation(data=data, prompt=prompt, logging_obj=logging_obj, model_response=model_response, api_base=api_base, api_key=api_key, timeout=timeout, client=client, max_retries=max_retries)  # type: ignore
+                return self.aimage_generation(data=data, prompt=prompt, logging_obj=logging_obj, model_response=model_response, api_base=api_base, api_key=api_key, timeout=timeout, client=client, max_retries=max_retries, organization=organization)  # type: ignore
 
             openai_client: OpenAI = self._get_openai_client(  # type: ignore
                 is_async=False,
@@ -1363,6 +1368,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                 api_base=api_base,
                 timeout=timeout,
                 max_retries=max_retries,
+                organization=organization,
                 client=client,
             )
 

@@ -336,7 +336,7 @@ def _handle_team_assignment(base_url: str, api_key: str, user_id: str) -> None:
 @click.pass_context
 def login(ctx: click.Context):
     """Login to LiteLLM proxy using SSO authentication"""
-    import uuid
+    from litellm._uuid import uuid
 
     from litellm.constants import LITELLM_CLI_SOURCE_IDENTIFIER
     from litellm.proxy.client.cli.interface import show_commands
@@ -353,7 +353,8 @@ def login(ctx: click.Context):
         # Construct SSO login URL with CLI source and pre-generated key
         sso_url = f"{base_url}/sso/key/generate?source={LITELLM_CLI_SOURCE_IDENTIFIER}&key={key_id}"
         
-        # If we have an existing key, include it so the server can regenerate it
+        # If we have an existing key, include it as a parameter to the login endpoint
+        # The server will encode it in the OAuth state parameter for the SSO flow
         if existing_key:
             sso_url += f"&existing_key={existing_key}"
         
