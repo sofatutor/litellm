@@ -2628,12 +2628,11 @@ Default values is `4` for all categories
 
 ## CloudWatch Logging
 
-Log LLM input/output and Assistants API interactions to AWS CloudWatch.
+Log LLM input/output to AWS CloudWatch.
 
 | Property | Details |
 |----------|---------|
-| Description | Log LLM calls and Assistants API interactions to AWS CloudWatch |
-| Supports Assistants API | Yes - add_messages, get_assistants, run_thread |
+| Description | Log LLM calls to AWS CloudWatch |
 
 #### Basic Setup
 
@@ -2661,15 +2660,4 @@ litellm --config /path/to/config.yaml
 #### Fields Logged to CloudWatch
 
 - Standard LLM request/response data
-- Assistants API endpoints: `add_messages`, `get_assistants`, `run_thread`
 - All logs include a unique `litellm_call_id` for tracing
-
-#### CloudWatch Logs Insights Queries
-
-Search by call type:
-```
-fields @timestamp, thread_id, call_type, litellm_call_id, duration_ms
-| filter call_type = "run_thread"
-| sort @timestamp desc
-| limit 20
-```

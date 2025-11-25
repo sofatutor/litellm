@@ -187,63 +187,6 @@ class TestCloudWatchLogger(unittest.TestCase):
         # Verify put_log_events was called
         mock_client.put_log_events.assert_called_once()
 
-    @patch("litellm.integrations.cloud_watch.boto3")
-    def test_assistants_logging(self, mock_boto3):
-        """Test logging Assistants API events to CloudWatch"""
-        # Arrange
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        logger = CloudWatchLogger(
-            log_group_name=self.log_group_name,
-            log_stream_name=self.log_stream_name,
-            aws_region=self.aws_region,
-        )
-        
-        # Create test data for assistants API
-        test_kwargs = {
-            "litellm_params": {
-                "metadata": {
-                    "thread_id": "thread_abc123",
-                    "litellm_call_id": "asst-call-id-123",
-                    "call_type": "add_messages",
-                }
-            }
-        }
-        
-        # Mock OpenAI AsyncAssistantEventHandler
-        mock_response = MagicMock()
-        mock_response.current_run.id = "run_abc123"
-        mock_response.current_run.assistant_id = "asst_def456"
-        mock_response.current_run.thread_id = "thread_abc123"
-        mock_response.current_run.usage.completion_tokens = 10
-        mock_response.current_run.usage.prompt_tokens = 5
-        mock_response.current_run.usage.total_tokens = 15
-        mock_response.current_run.created_at = 1234567890
-        mock_response.current_run.completed_at = 1234567895
-        mock_response.current_run.failed_at = None
-        mock_response.current_run.cancelled_at = None
-        mock_response.current_message_snapshot = None
-        
-        # Set the OpenAI type to match what the code is checking
-        mock_response.__class__.__name__ = "AsyncAssistantEventHandler"
-        mock_response.__class__.__module__ = "openai.lib.streaming._assistants"
-        
-        # Act
-        with patch("litellm.integrations.cloud_watch.openai") as mock_openai:
-            mock_openai.lib.streaming._assistants.AsyncAssistantEventHandler = type(mock_response.__class__.__name__, (), {"__module__": mock_response.__class__.__module__})
-            logger.log_event(
-                kwargs=test_kwargs,
-                response_obj=mock_response,
-                start_time=1234567890,
-                end_time=1234567895,
-                print_verbose=lambda x: None,
-            )
-        
-        # Assert
-        mock_client.put_log_events.assert_called_once()
-
-
 # For pytest compatibility
 def test_cloudwatch_logger_init():
     """Pytest-compatible test for CloudWatchLogger initialization"""

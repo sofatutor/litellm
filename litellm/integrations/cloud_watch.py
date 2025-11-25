@@ -2,7 +2,6 @@ import datetime
 import os
 import boto3
 import json
-import openai
 from typing import Optional
 from botocore.exceptions import ClientError
 
