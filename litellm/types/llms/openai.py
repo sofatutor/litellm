@@ -1937,3 +1937,103 @@ class OpenAIVideoObject(BaseModel):
             return self.model_dump(**kwargs)
         except Exception:
             return self.dict()
+
+
+# Conversations API Types (part of Responses API ecosystem)
+# These types support the stateful multi-turn conversation management
+# that works alongside the Responses API.
+
+
+class ConversationContentItem(TypedDict, total=False):
+    """Content item within a conversation item (message)."""
+
+    type: Required[str]  # e.g., "input_text", "output_text", "text"
+    text: str
+    annotations: Optional[List[Dict[str, Any]]]
+
+
+class Conversation(TypedDict, total=False):
+    """
+    Conversation object representing a conversational session.
+    Part of the OpenAI Responses API ecosystem for stateful multi-turn conversations.
+    """
+
+    id: Required[str]
+    object: Required[Literal["conversation"]]
+    created_at: Required[int]
+    metadata: Optional[Dict[str, str]]
+    status: str
+
+
+class ConversationItem(TypedDict, total=False):
+    """
+    ConversationItem object representing a single item in a conversation.
+    Items can be messages, function calls, function call outputs, etc.
+    """
+
+    id: Required[str]
+    object: Required[Literal["conversation.item"]]
+    conversation_id: str
+    type: Required[str]  # e.g., "message", "function_call", "function_call_output"
+    role: str  # e.g., "user", "assistant", "system"
+    content: List[ConversationContentItem]
+    status: str
+
+
+class ConversationItemList(TypedDict):
+    """List of conversation items."""
+
+    object: Literal["list"]
+    data: List[ConversationItem]
+    first_id: Optional[str]
+    last_id: Optional[str]
+    has_more: bool
+
+
+class ConversationCreateParams(TypedDict, total=False):
+    """Parameters for creating a conversation."""
+
+    metadata: Optional[Dict[str, str]]
+    extra_headers: Optional[Dict[str, str]]
+    extra_body: Optional[Dict[str, str]]
+    timeout: Optional[float]
+
+
+class ConversationUpdateParams(TypedDict, total=False):
+    """Parameters for updating a conversation."""
+
+    metadata: Optional[Dict[str, str]]
+    extra_headers: Optional[Dict[str, str]]
+    extra_body: Optional[Dict[str, str]]
+    timeout: Optional[float]
+
+
+class ConversationDeletedResource(TypedDict):
+    """Response when a conversation or conversation item is deleted."""
+
+    id: str
+    object: Literal["conversation.deleted"]
+    deleted: bool
+
+
+class ConversationItemCreateParams(TypedDict, total=False):
+    """Parameters for creating a conversation item."""
+
+    type: Required[str]  # e.g., "message"
+    role: str  # e.g., "user", "assistant"
+    content: List[ConversationContentItem]
+    extra_headers: Optional[Dict[str, str]]
+    extra_body: Optional[Dict[str, str]]
+    timeout: Optional[float]
+
+
+class ConversationItemListParams(TypedDict, total=False):
+    """Parameters for listing conversation items."""
+
+    limit: Optional[int]
+    order: Optional[Literal["asc", "desc"]]
+    after: Optional[str]
+    before: Optional[str]
+    extra_headers: Optional[Dict[str, str]]
+    extra_body: Optional[Dict[str, str]]
+    timeout: Optional[float]
