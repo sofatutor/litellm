@@ -36,6 +36,15 @@ ROUTE_ENDPOINT_MAPPING = {
     "alist_containers": "/containers",
     "aretrieve_container": "/containers/{container_id}",
     "adelete_container": "/containers/{container_id}",
+    # Conversations API (part of Responses API ecosystem)
+    "acreate_conversation": "/conversations",
+    "aget_conversation": "/conversations/{conversation_id}",
+    "aupdate_conversation": "/conversations/{conversation_id}",
+    "adelete_conversation": "/conversations/{conversation_id}",
+    "acreate_conversation_item": "/conversations/{conversation_id}/items",
+    "alist_conversation_items": "/conversations/{conversation_id}/items",
+    "aget_conversation_item": "/conversations/{conversation_id}/items/{item_id}",
+    "adelete_conversation_item": "/conversations/{conversation_id}/items/{item_id}",
 }
 
 
@@ -126,6 +135,15 @@ async def route_request(
         "alist_containers",
         "aretrieve_container",
         "adelete_container",
+        # Conversations API (part of Responses API ecosystem)
+        "acreate_conversation",
+        "aget_conversation",
+        "aupdate_conversation",
+        "adelete_conversation",
+        "acreate_conversation_item",
+        "alist_conversation_items",
+        "aget_conversation_item",
+        "adelete_conversation_item",
     ],
 ):
     """
@@ -235,6 +253,15 @@ async def route_request(
                 "alist_containers",
                 "aretrieve_container",
                 "adelete_container",
+                # Conversations API (part of Responses API ecosystem)
+                "acreate_conversation",
+                "aget_conversation",
+                "aupdate_conversation",
+                "adelete_conversation",
+                "acreate_conversation_item",
+                "alist_conversation_items",
+                "aget_conversation_item",
+                "adelete_conversation_item",
             ]:
                 # moderation endpoint does not require `model` parameter
                 return getattr(llm_router, f"{route_type}")(**data)
