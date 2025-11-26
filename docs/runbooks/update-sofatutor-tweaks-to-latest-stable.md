@@ -319,4 +319,4 @@ git push origin "${NEW_SOFATUTOR_TAG}"
 
 ---
 
-*Last updated: November 2024*
+*Last updated: November 2025*
