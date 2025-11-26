@@ -1394,6 +1394,7 @@ from .batch_completion.main import *  # type: ignore
 from .rerank_api.main import *
 from .llms.anthropic.experimental_pass_through.messages.handler import *
 from .responses.main import *
+from .conversations.main import *  # Conversations API (part of Responses API ecosystem)
 from .containers.main import *
 from .ocr.main import *
 from .search.main import *
