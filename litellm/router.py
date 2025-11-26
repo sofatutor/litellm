@@ -807,6 +807,31 @@ class Router:
         self.alist_input_items = self.factory_function(
             litellm.alist_input_items, call_type="alist_input_items"
         )
+        # Conversations API (part of Responses API ecosystem)
+        self.acreate_conversation = self.factory_function(
+            litellm.acreate_conversation, call_type="acreate_conversation"
+        )
+        self.aget_conversation = self.factory_function(
+            litellm.aget_conversation, call_type="aget_conversation"
+        )
+        self.aupdate_conversation = self.factory_function(
+            litellm.aupdate_conversation, call_type="aupdate_conversation"
+        )
+        self.adelete_conversation = self.factory_function(
+            litellm.adelete_conversation, call_type="adelete_conversation"
+        )
+        self.acreate_conversation_item = self.factory_function(
+            litellm.acreate_conversation_item, call_type="acreate_conversation_item"
+        )
+        self.alist_conversation_items = self.factory_function(
+            litellm.alist_conversation_items, call_type="alist_conversation_items"
+        )
+        self.aget_conversation_item = self.factory_function(
+            litellm.aget_conversation_item, call_type="aget_conversation_item"
+        )
+        self.adelete_conversation_item = self.factory_function(
+            litellm.adelete_conversation_item, call_type="adelete_conversation_item"
+        )
         self._arealtime = self.factory_function(
             litellm._arealtime, call_type="_arealtime"
         )
