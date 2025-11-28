@@ -221,6 +221,102 @@ async def test_update_daily_spend_sorting():
 
     # Verify that table.upsert was called
     mock_table.upsert.assert_has_calls(upsert_calls)
+
+
+@pytest.mark.asyncio
+async def test_update_daily_spend_sorting_with_none_values():
+    """
+    Test that sorting handles None values in optional fields without raising TypeError.
+
+    This tests the fix for a bug where the daily spend batch processor was crashing
+    with a TypeError when sorting transactions that had None values in optional fields
+    like 'model' or 'custom_llm_provider'. Python's sort cannot compare None with strings,
+    so we need to coerce None values to empty strings before sorting.
+    """
+    # Setup
+    mock_prisma_client = MagicMock()
+    mock_batcher = MagicMock()
+    mock_table = MagicMock()
+    mock_prisma_client.db.batch_.return_value.__aenter__.return_value = mock_batcher
+    mock_batcher.litellm_dailyuserspend = mock_table
+
+    # Create transactions with None values in various optional fields
+    # This should NOT raise TypeError during sorting
+    daily_spend_transactions = {
+        "test_key_1": {
+            "user_id": "user1",
+            "date": "2024-01-01",
+            "api_key": "test-api-key",
+            "model": None,  # None model
+            "custom_llm_provider": "openai",
+            "mcp_namespaced_tool_name": None,
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "spend": 0.1,
+            "api_requests": 1,
+            "successful_requests": 1,
+            "failed_requests": 0,
+        },
+        "test_key_2": {
+            "user_id": "user2",
+            "date": "2024-01-01",
+            "api_key": "test-api-key",
+            "model": "gpt-4",
+            "custom_llm_provider": None,  # None provider
+            "mcp_namespaced_tool_name": None,
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "spend": 0.1,
+            "api_requests": 1,
+            "successful_requests": 1,
+            "failed_requests": 0,
+        },
+        "test_key_3": {
+            "user_id": "user3",
+            "date": "2024-01-01",
+            "api_key": None,  # None api_key
+            "model": None,  # None model
+            "custom_llm_provider": None,  # None provider
+            "mcp_namespaced_tool_name": "tool1",
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "spend": 0.1,
+            "api_requests": 1,
+            "successful_requests": 1,
+            "failed_requests": 0,
+        },
+        "test_key_4": {
+            "user_id": None,  # None user_id
+            "date": "2024-01-01",
+            "api_key": "test-api-key",
+            "model": "gpt-4",
+            "custom_llm_provider": "openai",
+            "mcp_namespaced_tool_name": None,
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "spend": 0.1,
+            "api_requests": 1,
+            "successful_requests": 1,
+            "failed_requests": 0,
+        },
+    }
+
+    # This should NOT raise TypeError - the fix ensures None values are coerced to ""
+    await DBSpendUpdateWriter._update_daily_spend(
+        n_retry_times=1,
+        prisma_client=mock_prisma_client,
+        proxy_logging_obj=MagicMock(),
+        daily_spend_transactions=daily_spend_transactions,
+        entity_type="user",
+        entity_id_field="user_id",
+        table_name="litellm_dailyuserspend",
+        unique_constraint_name="user_id_date_api_key_model_custom_llm_provider",
+    )
+
+    # Verify that all 4 transactions were processed (upsert called 4 times)
+    assert mock_table.upsert.call_count == 4
+
+
 # Tag Spend Tracking Tests
 
 
