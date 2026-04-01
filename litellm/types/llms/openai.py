@@ -1233,7 +1233,7 @@ class ResponsesAPIResponse(BaseLiteLLMOpenAIResponseObject):
     created_at: int
     error: Optional[dict] = None
     incomplete_details: Optional[IncompleteDetails] = None
-    instructions: Optional[str] = None
+    instructions: Optional[Union[str, List[Dict[str, Any]]]] = None
     metadata: Optional[Dict] = None
     model: Optional[str] = None
     object: Optional[str] = None

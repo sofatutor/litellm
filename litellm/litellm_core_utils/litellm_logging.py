@@ -1855,6 +1855,12 @@ class Logging(LiteLLMLoggingBaseClass):
         """
         Returns True if the call type is recognized for logging (eg. ModelResponse, ModelResponseStream, etc.)
         """
+        try:
+            if self.call_type in (CallTypes.speech.value, CallTypes.aspeech.value):
+                return True
+        except Exception:
+            pass
+
         if (
             isinstance(logging_result, ModelResponse)
             or isinstance(logging_result, ModelResponseStream)
@@ -2038,6 +2044,24 @@ class Logging(LiteLLMLoggingBaseClass):
                         result=result,
                         call_type=self.call_type,
                     )
+
+            if "standard_logging_object" not in self.model_call_details:
+                try:
+                    self.model_call_details["standard_logging_object"] = (
+                        get_standard_logging_object_payload(
+                            kwargs=self.model_call_details,
+                            init_response_obj=result
+                            if isinstance(result, (dict, BaseModel))
+                            else {},
+                            start_time=start_time,
+                            end_time=end_time,
+                            logging_obj=self,
+                            status="success",
+                            standard_built_in_tools_params=self.standard_built_in_tools_params,
+                        )
+                    )
+                except Exception:
+                    pass
 
             self.has_run_logging(event_type="sync_success")
             for callback in callbacks:
@@ -2603,6 +2627,22 @@ class Logging(LiteLLMLoggingBaseClass):
                     result=result,
                     call_type=self.call_type,
                 )
+
+        if "standard_logging_object" not in self.model_call_details:
+            try:
+                self.model_call_details["standard_logging_object"] = (
+                    get_standard_logging_object_payload(
+                        kwargs=self.model_call_details,
+                        init_response_obj=result if isinstance(result, (dict, BaseModel)) else {},
+                        start_time=start_time,
+                        end_time=end_time,
+                        logging_obj=self,
+                        status="success",
+                        standard_built_in_tools_params=self.standard_built_in_tools_params,
+                    )
+                )
+            except Exception:
+                pass
 
         self.has_run_logging(event_type="async_success")
 

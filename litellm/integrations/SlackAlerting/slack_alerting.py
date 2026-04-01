@@ -532,12 +532,19 @@ class SlackAlerting(CustomBatchLogger):
         _cache_key = "budget_alerts:failed_tracking:{}".format(failing_model)
         result = await _cache.async_get_cache(key=_cache_key)
         if result is None:
-            await self.send_alert(
-                message=message,
-                level="High",
-                alert_type=AlertType.failed_tracking_spend,
-                alerting_metadata={},
-            )
+            try:
+                await self.send_alert(
+                    message=message,
+                    level="High",
+                    alert_type=AlertType.failed_tracking_spend,
+                    alerting_metadata={},
+                )
+            except Exception as e:
+                # Don't raise if webhook is missing or misconfigured; log and continue
+                verbose_proxy_logger.error(
+                    "[Non-Blocking Error] Slack failed_tracking_alert: %s", str(e)
+                )
+                return
             await _cache.async_set_cache(
                 key=_cache_key,
                 value="SENT",
